@@ -1,0 +1,9 @@
+name = "odds-scraper-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[triggers]
+crons = ["*/10 * * * *", "*/1 * * * *"]
+
+[vars]
+DEFAULT_SPORT_ID = "1181"
