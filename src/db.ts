@@ -4,7 +4,16 @@ import { League, Market, Outcome, Sport, Game } from "./domain"
 type WorkerEnv = { SUPABASE_URL: string; SUPABASE_SERVICE_ROLE_KEY: string }
 
 export function getClient(env: WorkerEnv): SupabaseClient {
-  return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  const raw = String(env.SUPABASE_URL ?? "").trim()
+  if (!raw) throw new Error("SUPABASE_URL is missing")
+  if (!/^https?:\/\//i.test(raw)) throw new Error("SUPABASE_URL must start with http:// or https://")
+  try {
+    new URL(raw)
+  } catch {
+    throw new Error("SUPABASE_URL is not a valid URL")
+  }
+
+  return createClient(raw, env.SUPABASE_SERVICE_ROLE_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { fetch }
   })

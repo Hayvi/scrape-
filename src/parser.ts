@@ -40,28 +40,32 @@ export function parseMatchOddsGrouped(html: string, matchId: string): import("./
   starts.push(scope.length)
 
   let currentMarketName: string | null = null
+  const initialNameM = scope.match(/<div[^>]*class=["'][^"']*oddName[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)
+  if (initialNameM) currentMarketName = decodeEntities(initialNameM[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim())
 
   for (let i = 0; i < starts.length - 1; i++) {
     const block = scope.slice(starts[i], starts[i + 1])
-    const nameM = block.match(/<div[^>]*class=["']oddName["'][^>]*>[\s\S]*?<span[^>]*>([\s\S]*?)<\/span>/i)
-    if (nameM) currentMarketName = decodeEntities(nameM[1]).trim()
-    if (!currentMarketName) continue
+    const nameM = block.match(/<div[^>]*class=["'][^"']*oddName[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)
+    if (nameM) currentMarketName = decodeEntities(nameM[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim())
 
     const hM = block.match(/<div[^>]*class=["']divOddSpecial["'][^>]*>[\s\S]*?<label[^>]*>([\s\S]*?)<\/label>/i)
     const handicap = hM ? Number((decodeEntities(hM[1]).trim()).replace(",", ".")) : null
 
-    const oRe = /<div[^>]*class=["']match-odd["'][^>]*data-matchoddid=["'](\d+)["'][^>]*>([\s\S]*?)<\/div>/gi
+    const oRe = /<(div|span)[^>]*data-matchoddid=["'](\d+)["'][^>]*>[\s\S]*?<\/\1>/gi
     let om: RegExpExecArray | null
     const outcomes: import("./domain").ParsedOutcome[] = []
     while ((om = oRe.exec(block)) !== null) {
-      const id = om[1]
-      const inner = om[2]
+      const full = om[0]
+      const id = om[2]
+      const openTag = full.match(/^<[^>]*>/i)?.[0] ?? ""
+      if (!/class=["'][^"']*match-odd[^"']*["']/i.test(openTag)) continue
+      const inner = full.replace(/^<[^>]*>/, "").replace(new RegExp(`<\\/${om[1]}>$`, "i"), "")
       const labelM = inner.match(/<label[^>]*>([\s\S]*?)<\/label>/i)
       const rawLabel = labelM ? labelM[1] : ""
       const label = normalizeOutcomeLabel(rawLabel)
       let price = NaN
-      const priceAttr = inner.match(/data-oddvaluedecimal='([^']+)'/i)
-      if (priceAttr) price = parseDecimal(priceAttr[1])
+      const priceTagAttr = extractAttr(openTag, "data-oddvaluedecimal")
+      if (priceTagAttr) price = parseDecimal(priceTagAttr)
       if (isNaN(price)) {
         const textM = inner.match(/<span[^>]*class=["']quoteValue["'][^>]*>([\s\S]*?)<\/span>/i)
         if (textM) price = parseDecimal(textM[1].replace(/<[^>]*>/g, "").trim())
@@ -70,7 +74,7 @@ export function parseMatchOddsGrouped(html: string, matchId: string): import("./
     }
     if (!outcomes.length) continue
 
-    const marketName = currentMarketName
+    const marketName = currentMarketName ?? "Market"
     const keyBase = mapMarketKey(marketName)
     const key = handicap !== null ? `${keyBase}` : keyBase
     const external_id = handicap !== null ? `${keyBase}_${handicap}` : keyBase
@@ -402,4 +406,86 @@ export function parseLive(html: string): ParsedSport[] {
 
   if (!leagues.length) return []
   return [{ key: sportKey, name: sportName, external_id: selectedSportId, leagues }]
+}
+
+function parseNextMatchesStartTime(rowHtml: string): string {
+  const dateM = rowHtml.match(/>(\d{2}\/\d{2}\/\d{4})</)
+  const timeM = rowHtml.match(/>(\d{2}:\d{2}:\d{2})</) ?? rowHtml.match(/>(\d{2}:\d{2})</)
+  if (dateM && timeM) {
+    const [d, mth, y] = dateM[1].split("/")
+    const t = timeM[1].length === 5 ? `${timeM[1]}:00` : timeM[1]
+    return new Date(`${y}-${mth}-${d}T${t}Z`).toISOString()
+  }
+  return new Date().toISOString()
+}
+
+function parseNextMatchesTeams(rowHtml: string): { home: string; away: string } | null {
+  const home1 = rowHtml.match(/<div[^>]*class=["'][^"']*(competitor1-name|team1|home)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[2]
+  const away1 = rowHtml.match(/<div[^>]*class=["'][^"']*(competitor2-name|team2|away)[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[2]
+  if (home1 && away1) {
+    return { home: decodeEntities(home1).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(), away: decodeEntities(away1).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() }
+  }
+
+  const text = decodeEntities(rowHtml.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim()
+  const m = text.match(/(.+?)\s+-\s+(.+?)(?:\s{2,}|$)/)
+  if (m) return { home: m[1].trim(), away: m[2].trim() }
+  return null
+}
+
+function extractNextMatchesSections(html: string) {
+  const scope = html
+  const sections: { tournamentId: string | null; name: string; rows: string[] }[] = []
+
+  const headerRe = /<tr[^>]*class=["'][^"']*header_tournament_row[^"']*["'][^>]*>[\s\S]*?<\/tr>/gi
+  const indices: { idx: number; block: string }[] = []
+  let hm: RegExpExecArray | null
+  while ((hm = headerRe.exec(scope)) !== null) indices.push({ idx: hm.index, block: hm[0] })
+  if (!indices.length) return sections
+  indices.push({ idx: scope.length, block: "" })
+
+  for (let i = 0; i < indices.length - 1; i++) {
+    const headerHtml = indices[i].block
+    const tournamentId = headerHtml.match(/data-tournamentid=["'](\d+)["']/i)?.[1] ?? null
+    const td = headerHtml.match(/<td[^>]*class=["']tournament_name_section["'][^>]*>([\s\S]*?)<\/td>/i)?.[1] ?? ""
+    const name = decodeEntities(td.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim() || "Tournament"
+
+    const block = scope.slice(indices[i].idx, indices[i + 1].idx)
+    const rows: string[] = []
+    const rowRe = /<tr[^>]*>[\s\S]*?data-matchid=["'](\d+)["'][\s\S]*?<\/tr>/gi
+    let rm: RegExpExecArray | null
+    while ((rm = rowRe.exec(block)) !== null) rows.push(rm[0])
+    if (rows.length) sections.push({ tournamentId, name, rows })
+  }
+  return sections
+}
+
+export function parsePrematchNextMatches(html: string, sportId: string): ParsedSport[] {
+  const sportKey = sportId === "1181" ? "football" : `sport-${sportId}`
+  const sportName = sportId === "1181" ? "Football" : `Sport ${sportId}`
+
+  const leagues: ParsedSport["leagues"] = []
+  const sections = extractNextMatchesSections(html)
+  for (const s of sections) {
+    const games: any[] = []
+    for (const row of s.rows) {
+      const matchId = row.match(/data-matchid=["'](\d+)["']/i)?.[1] ?? null
+      if (!matchId) continue
+      const teams = parseNextMatchesTeams(row)
+      if (!teams) continue
+      games.push({
+        external_id: matchId,
+        home_team: teams.home,
+        away_team: teams.away,
+        start_time: parseNextMatchesStartTime(row),
+        live: false,
+        markets: []
+      })
+    }
+    if (!games.length) continue
+    const ext = `prematch_${sportId}_${s.tournamentId ?? (slugify(s.name) || "tournament")}`
+    leagues.push({ name: s.name, external_id: ext, games })
+  }
+
+  if (!leagues.length) return []
+  return [{ key: sportKey, name: sportName, external_id: sportId, leagues }]
 }

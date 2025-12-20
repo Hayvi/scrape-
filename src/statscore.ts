@@ -14,7 +14,14 @@ function buildSSRUrl(lsId: string, widgetGroupId: string, language = "en", timez
 
 export async function getStatscoreSSR(lsId: string, widgetGroupId: string, language = "en", timezone = "0"): Promise<any> {
   const url = buildSSRUrl(lsId, widgetGroupId, language, timezone)
-  const res = await fetchWithRetry(url, { headers: { accept: "application/json" } })
+  const res = await fetchWithRetry(url, {
+    headers: {
+      accept: "application/json",
+      "accept-language": "en-US,en;q=0.9",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+      referer: "https://widgets.statscore.com/"
+    }
+  })
   return await res.json()
 }
 
@@ -45,7 +52,7 @@ export function parseStatscoreSSR(payload: any, lsId: string): LiveMeta {
 
   // Try to extract a textual status label (best-effort)
   let status_name: string | null = null
-  const statusM = html.match(/>(1st half|2nd half|Half time|Full time|Kick off|Live)\s*<\/i)
+  const statusM = html.match(/>(1st half|2nd half|Half time|Full time|Kick off|Live)\s*<\//i)
   if (statusM) status_name = statusM[1]
 
   // Try to extract simple scoreboard numbers

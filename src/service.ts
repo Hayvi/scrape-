@@ -1,11 +1,19 @@
-import { getPrematchHTML, getLiveHTML, getPopularMatchesHTML, getSportHTML } from "./fetcher"
-import { parsePrematch, parseLive, parsePopularMatchesFragment, getSelectedSportIdFromNav } from "./parser"
+import { getLiveHTML, getNextMatchesHTML, getPopularMatchesHTML, getSportHTML, getTextWithDdosBypassDetailed } from "./fetcher"
+import { getSelectedSportIdFromNav, parseLive, parseMatchOddsGrouped, parsePopularMatchesFragment, parsePrematch, parsePrematchNextMatches } from "./parser"
 import { Game, League, Market, Outcome, ParsedSport, Sport } from "./domain"
 import { getClient, getGamesIdMap, getLeaguesIdMap, getMarketsIdMap, getSportsIdMap, upsertGames, upsertLeagues, upsertMarkets, upsertOutcomes, upsertSports } from "./db"
 
 type WorkerEnv = { SUPABASE_URL: string; SUPABASE_SERVICE_ROLE_KEY: string; DEFAULT_SPORT_ID?: string }
 
 const SOURCE = "tounesbet"
+
+function capMarkets(markets: any[], maxMarkets = 60, maxOutcomes = 16) {
+  const ms = markets.slice(0, maxMarkets)
+  for (const m of ms) {
+    if (Array.isArray(m?.outcomes)) m.outcomes = m.outcomes.slice(0, maxOutcomes)
+  }
+  return ms
+}
 
 function uniqBy<T, K>(arr: T[], key: (v: T) => K): T[] {
   const seen = new Set<string>()
@@ -83,18 +91,35 @@ export async function persistParsed(env: WorkerEnv, parsed: ParsedSport[]): Prom
 }
 
 export async function runPrematch(env: WorkerEnv) {
-  // Prefer explicit sport page if DEFAULT_SPORT_ID provided, else fall back to Prematch
   const sportId = env.DEFAULT_SPORT_ID || "1181"
-  let html: string
+  let navHtml: string
   try {
-    html = await getSportHTML(sportId)
+    navHtml = await getSportHTML(sportId)
   } catch {
-    html = await getPrematchHTML()
+    navHtml = await getNextMatchesHTML(sportId)
   }
-  const parsed = parsePrematch(html)
+  const selected = getSelectedSportIdFromNav(navHtml) || sportId
 
-  // Determine selected sport and attach Popular Matches league if available
-  const selected = getSelectedSportIdFromNav(html) || sportId
+  const nextHtml = await getNextMatchesHTML(selected)
+  const parsed = parsePrematchNextMatches(nextHtml, selected)
+
+  const games = parsed.flatMap(s => s.leagues).flatMap(l => l.games)
+  const maxDeepGames = Math.min(12, games.length)
+  for (let i = 0; i < maxDeepGames; i++) {
+    const g = games[i]
+    try {
+      const fetched = await getTextWithDdosBypassDetailed(`https://tounesbet.com/Match/MatchOddsGrouped?matchId=${encodeURIComponent(g.external_id)}`, {
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.9",
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+        "x-requested-with": "XMLHttpRequest"
+      })
+      if (fetched.status >= 200 && fetched.status < 300) {
+        g.markets = capMarkets(parseMatchOddsGrouped(fetched.text, g.external_id))
+      }
+    } catch {
+    }
+  }
   try {
     const popHtml = await getPopularMatchesHTML(selected, "all_days", "0")
     const league = parsePopularMatchesFragment(popHtml, selected)
