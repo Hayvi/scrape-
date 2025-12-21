@@ -1,0 +1,155 @@
+# odds-scraper-worker
+
+Cloudflare Worker that scrapes sports betting data from **tounesbet.com**, persists it into **Supabase**, and serves it via JSON APIs.
+
+- Worker name: `odds-scraper-worker`
+- Entry: `src/index.ts`
+- Deploy config: `wrangler.toml`
+
+## Requirements
+
+- Node.js (for local dev / deploy)
+- Cloudflare Wrangler
+- Supabase project (Postgres)
+
+## Environment variables
+
+The Worker expects these bindings:
+
+- `SUPABASE_URL` (required)
+- `SUPABASE_SERVICE_ROLE_KEY` (required)
+- `DEFAULT_SPORT_ID` (optional, default `1181`)
+
+> Note: do **not** expose the service role key in client apps. It must only live in the Worker environment.
+
+## Cron schedules
+
+Configured in `wrangler.toml`:
+
+- `*/1 * * * *` (every minute): runs `runLive(env)`
+- `*/10 * * * *` (every 10 minutes): runs `runPrematch(env)`
+
+## Database schema
+
+Create the required tables in Supabase by running:
+
+- `sql/schema.sql`
+
+Tables used:
+
+- `sports`
+- `leagues`
+- `games`
+- `markets`
+- `outcomes`
+- `live_meta`
+
+## HTTP API
+
+Base URL (example): `https://<your-worker>.workers.dev`
+
+### Health / config
+
+#### `GET /api/test/env`
+Returns a JSON report about whether env vars are present/valid.
+
+---
+
+## Scrape / test endpoints
+
+These endpoints **fetch + parse** the upstream site. They can optionally **persist** results into Supabase.
+
+### `GET /api/test/live`
+Scrape live matches.
+
+Query params:
+
+- `persist=1` (optional) persist parsed data to Supabase
+- `debug=1` (optional) includes extra debug info about fetched HTML and parsing signals
+- `deep=1` (optional) additionally fetches per-match odds from `MatchOddsGrouped` (more expensive)
+- `discover=1` (optional, only meaningful with `debug=1`) tries to extract websocket/http candidates from site JS
+- `limit=<1..25>` (optional, default `10`) limits fallback match IDs
+
+Notes:
+
+- If the main live table parsing fails, the endpoint may fall back to extracting IDs from widgets or `/Match/TopMatches`.
+
+### `GET /api/test/prematch`
+Scrape prematch (upcoming) matches.
+
+Query params:
+
+- `persist=1` (optional) persist parsed data to Supabase
+- `deep=1` (optional) fetch odds for up to `min(limit, 3)` games
+- `limit=<1..25>` (optional, default `10`) affects deep fetch limit
+
+### `GET /api/test/match/:matchId`
+Fetch and parse odds markets/outcomes for a specific match.
+
+Query params:
+
+- `debug=1` (optional) includes parsing signals/snippets
+
+Example:
+
+- `/api/test/match/11834326`
+
+### `GET /api/test/probe?path=...`
+Fetches a raw path (relative to `https://tounesbet.com`) and returns basic parsing signals + extracted match IDs.
+
+Query params:
+
+- `path` (required) e.g. `/Match/TopMatches`
+
+### `GET /api/test/statscore/:lsId`
+Fetch and parse live metadata from Statscore SSR.
+
+Query params:
+
+- `wg` (optional) widget group id (default is hardcoded in code)
+- `tz` (optional) timezone offset (default `0`)
+- `persist=1` (optional) upserts parsed data into `live_meta`
+
+---
+
+## Read endpoints (from Supabase)
+
+These endpoints read from your Supabase tables and return a hierarchical response:
+
+`sport -> leagues -> games -> markets -> outcomes`
+
+### `GET /api/odds/prematch/:sportKey`
+Returns **non-live** games (`live=false`) for the sport key.
+
+Example:
+
+- `/api/odds/prematch/football`
+
+### `GET /api/odds/live/:sportKey`
+Returns **live** games (`live=true`) for the sport key.
+
+Example:
+
+- `/api/odds/live/football`
+
+---
+
+## Local development
+
+```bash
+npm install
+npx wrangler dev
+```
+
+## Deploy
+
+```bash
+npm install
+npx wrangler deploy
+```
+
+If your system Node.js is old, you can deploy with a temporary Node 20 + wrangler:
+
+```bash
+npx -y -p node@20 -p wrangler@3.95.0 -c "wrangler deploy"
+```
