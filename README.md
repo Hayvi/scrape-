@@ -48,6 +48,32 @@ Tables used:
 
 Base URL (example): `https://<your-worker>.workers.dev`
 
+## Frontend tester (Cloudflare Pages)
+
+This repo also includes a tiny Cloudflare Pages site to test the Worker endpoints from the browser.
+
+- Static UI: `pages/index.html`
+- Proxy function: `functions/api/[[path]].ts`
+
+The UI calls `/api/...` on the Pages domain, and the Pages Function proxies those requests to your Worker.
+
+### Pages environment variables
+
+Set this in your Cloudflare Pages project:
+
+- `API_BASE_URL` (required)
+  - Example: `https://odds-scraper-worker.ghzwael.workers.dev`
+
+### Deploy Pages
+
+In Cloudflare Dashboard:
+
+- **Build command**: *(empty)*
+- **Build output directory**: `pages`
+- **Functions directory**: `functions`
+
+After deploy, open the Pages site root (`/`) and use the buttons / custom path box.
+
 ### Health / config
 
 #### `GET /api/test/env`

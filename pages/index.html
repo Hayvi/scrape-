@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Odds Scraper Tester</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-950 text-slate-100">
+    <div class="mx-auto max-w-5xl px-4 py-10">
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-semibold">Odds Scraper Tester</h1>
+          <p class="text-slate-300 mt-1">Small frontend for testing the Worker API via a Cloudflare Pages proxy.</p>
+        </div>
+        <a class="text-slate-300 hover:text-white underline" href="/api/test/env" target="_blank" rel="noreferrer">/api/test/env</a>
+      </div>
+
+      <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+          <h2 class="text-lg font-medium">Quick actions</h2>
+          <div class="mt-4 grid grid-cols-1 gap-3">
+            <button class="btn" data-path="/api/test/live?persist=0&deep=0&limit=5">Test live (no persist)</button>
+            <button class="btn" data-path="/api/test/live?persist=1&deep=1&limit=5">Test live (persist=1, deep=1)</button>
+            <button class="btn" data-path="/api/test/prematch?persist=0&deep=0&limit=5">Test prematch (no persist)</button>
+            <button class="btn" data-path="/api/test/prematch?persist=1&deep=1&limit=5">Test prematch (persist=1, deep=1)</button>
+            <button class="btn" data-path="/api/odds/prematch/football">Read prematch odds (football)</button>
+            <button class="btn" data-path="/api/odds/live/football">Read live odds (football)</button>
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+          <h2 class="text-lg font-medium">Custom request</h2>
+          <p class="mt-1 text-sm text-slate-300">Requests are sent to this Pages site, which proxies <code class="rounded bg-slate-800 px-1 py-0.5">/api/*</code> to your Worker.</p>
+
+          <label class="mt-4 block text-sm text-slate-300">Path</label>
+          <input id="path" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100" value="/api/test/live?persist=0&deep=0&limit=5" />
+
+          <div class="mt-3 flex items-center gap-3">
+            <button id="send" class="btn">Send</button>
+            <a id="open" class="text-slate-300 hover:text-white underline" href="#" target="_blank" rel="noreferrer">Open in new tab</a>
+          </div>
+
+          <label class="mt-5 block text-sm text-slate-300">Response</label>
+          <pre id="out" class="mt-2 max-h-[520px] overflow-auto rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed"></pre>
+        </div>
+      </div>
+
+      <div class="mt-8 rounded-xl border border-slate-800 bg-slate-900/40 p-5 text-sm text-slate-300">
+        <div class="font-medium text-slate-100">Notes</div>
+        <div class="mt-2">
+          <div>- This UI is deployed on Cloudflare Pages.</div>
+          <div>- The proxy target is controlled by the Pages environment variable <code class="rounded bg-slate-800 px-1 py-0.5">API_BASE_URL</code>.</div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .btn {
+        border-radius: 0.5rem;
+        border: 1px solid rgb(51 65 85);
+        background: rgb(2 6 23);
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        width: 100%;
+      }
+      .btn:hover { background: rgb(15 23 42); }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    </style>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const out = $("out");
+      const pathInput = $("path");
+      const openLink = $("open");
+
+      function setPath(p) {
+        pathInput.value = p;
+        openLink.href = p;
+      }
+
+      async function send(path) {
+        out.textContent = "Loading...";
+        openLink.href = path;
+        try {
+          const res = await fetch(path, { headers: { accept: "application/json" } });
+          const text = await res.text();
+          let pretty = text;
+          try {
+            pretty = JSON.stringify(JSON.parse(text), null, 2);
+          } catch {}
+          out.textContent = `HTTP ${res.status}\n\n${pretty}`;
+        } catch (e) {
+          out.textContent = String(e);
+        }
+      }
+
+      document.querySelectorAll("button[data-path]").forEach((b) => {
+        b.addEventListener("click", () => {
+          const p = b.getAttribute("data-path");
+          setPath(p);
+          send(p);
+        });
+      });
+
+      $("send").addEventListener("click", () => send(pathInput.value));
+
+      setPath(pathInput.value);
+    </script>
+  </body>
+</html>
