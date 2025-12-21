@@ -63,7 +63,6 @@ create table if not exists outcomes (
   handicap numeric,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique(source, external_id),
   unique(market_id, label, handicap)
 );
 create index if not exists outcomes_market_id_idx on outcomes(market_id);

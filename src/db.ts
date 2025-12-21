@@ -21,27 +21,32 @@ export function getClient(env: WorkerEnv): SupabaseClient {
 
 export async function upsertSports(db: SupabaseClient, rows: Sport[]) {
   if (!rows.length) return
-  await db.from("sports").upsert(rows, { onConflict: "source,external_id" })
+  const { error } = await db.from("sports").upsert(rows, { onConflict: "source,external_id" })
+  if (error) throw new Error(`upsertSports failed: ${JSON.stringify(error)}`)
 }
 
 export async function upsertLeagues(db: SupabaseClient, rows: League[]) {
   if (!rows.length) return
-  await db.from("leagues").upsert(rows, { onConflict: "source,external_id" })
+  const { error } = await db.from("leagues").upsert(rows, { onConflict: "source,external_id" })
+  if (error) throw new Error(`upsertLeagues failed: ${JSON.stringify(error)}`)
 }
 
 export async function upsertGames(db: SupabaseClient, rows: Game[]) {
   if (!rows.length) return
-  await db.from("games").upsert(rows, { onConflict: "source,external_id" })
+  const { error } = await db.from("games").upsert(rows, { onConflict: "source,external_id" })
+  if (error) throw new Error(`upsertGames failed: ${JSON.stringify(error)}`)
 }
 
 export async function upsertMarkets(db: SupabaseClient, rows: Market[]) {
   if (!rows.length) return
-  await db.from("markets").upsert(rows, { onConflict: "source,external_id" })
+  const { error } = await db.from("markets").upsert(rows, { onConflict: "source,external_id" })
+  if (error) throw new Error(`upsertMarkets failed: ${JSON.stringify(error)}`)
 }
 
 export async function upsertOutcomes(db: SupabaseClient, rows: Outcome[]) {
   if (!rows.length) return
-  await db.from("outcomes").upsert(rows, { onConflict: "market_id,label,handicap" })
+  const { error } = await db.from("outcomes").upsert(rows, { onConflict: "market_id,label,handicap" })
+  if (error) throw new Error(`upsertOutcomes failed: ${JSON.stringify(error)}`)
 }
 
 export async function idMap<T extends { id: number; external_id: string }>(rows: T[]) {
@@ -52,7 +57,8 @@ export async function idMap<T extends { id: number; external_id: string }>(rows:
 
 export async function getSportsIdMap(db: SupabaseClient, source: string, externalIds: string[]) {
   if (!externalIds.length) return {}
-  const { data } = await db.from("sports").select("id,external_id").eq("source", source).in("external_id", externalIds)
+  const { data, error } = await db.from("sports").select("id,external_id").eq("source", source).in("external_id", externalIds)
+  if (error) throw new Error(`getSportsIdMap failed: ${JSON.stringify(error)}`)
   const map: Record<string, number> = {}
   for (const r of data ?? []) map[r.external_id] = r.id
   return map
@@ -60,7 +66,8 @@ export async function getSportsIdMap(db: SupabaseClient, source: string, externa
 
 export async function getLeaguesIdMap(db: SupabaseClient, source: string, externalIds: string[]) {
   if (!externalIds.length) return {}
-  const { data } = await db.from("leagues").select("id,external_id").eq("source", source).in("external_id", externalIds)
+  const { data, error } = await db.from("leagues").select("id,external_id").eq("source", source).in("external_id", externalIds)
+  if (error) throw new Error(`getLeaguesIdMap failed: ${JSON.stringify(error)}`)
   const map: Record<string, number> = {}
   for (const r of data ?? []) map[r.external_id] = r.id
   return map
@@ -68,7 +75,8 @@ export async function getLeaguesIdMap(db: SupabaseClient, source: string, extern
 
 export async function getGamesIdMap(db: SupabaseClient, source: string, externalIds: string[]) {
   if (!externalIds.length) return {}
-  const { data } = await db.from("games").select("id,external_id").eq("source", source).in("external_id", externalIds)
+  const { data, error } = await db.from("games").select("id,external_id").eq("source", source).in("external_id", externalIds)
+  if (error) throw new Error(`getGamesIdMap failed: ${JSON.stringify(error)}`)
   const map: Record<string, number> = {}
   for (const r of data ?? []) map[r.external_id] = r.id
   return map
@@ -76,7 +84,8 @@ export async function getGamesIdMap(db: SupabaseClient, source: string, external
 
 export async function getMarketsIdMap(db: SupabaseClient, source: string, externalIds: string[]) {
   if (!externalIds.length) return {}
-  const { data } = await db.from("markets").select("id,external_id").eq("source", source).in("external_id", externalIds)
+  const { data, error } = await db.from("markets").select("id,external_id").eq("source", source).in("external_id", externalIds)
+  if (error) throw new Error(`getMarketsIdMap failed: ${JSON.stringify(error)}`)
   const map: Record<string, number> = {}
   for (const r of data ?? []) map[r.external_id] = r.id
   return map
@@ -99,5 +108,6 @@ type LiveMetaRow = {
 
 export async function upsertLiveMeta(db: SupabaseClient, rows: LiveMetaRow[]) {
   if (!rows.length) return
-  await db.from("live_meta").upsert(rows, { onConflict: "provider_key" })
+  const { error } = await db.from("live_meta").upsert(rows, { onConflict: "provider_key" })
+  if (error) throw new Error(`upsertLiveMeta failed: ${JSON.stringify(error)}`)
 }

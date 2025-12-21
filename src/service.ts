@@ -81,11 +81,26 @@ export async function persistParsed(env: WorkerEnv, parsed: ParsedSport[]): Prom
   await upsertMarkets(db, markets)
   const marketIdMap = await getMarketsIdMap(db, SOURCE, markets.map(m => m.external_id))
 
+  const outcomeToMarketExt = new Map<string, string>()
+  for (const ps of parsed) {
+    for (const pl of ps.leagues) {
+      for (const pg of pl.games) {
+        for (const pm of pg.markets) {
+          for (const po of pm.outcomes) {
+            if (!outcomeToMarketExt.has(po.external_id)) outcomeToMarketExt.set(po.external_id, pm.external_id)
+          }
+        }
+      }
+    }
+  }
+
   for (let i = 0; i < outcomes.length; i++) {
-    const mExt = parsed.flatMap(ps => ps.leagues).flatMap(pl => pl.games).flatMap(pg => pg.markets).find(pm => pm.outcomes.some(po => po.external_id === outcomes[i].external_id))?.external_id
+    const mExt = outcomeToMarketExt.get(outcomes[i].external_id)
     if (mExt && marketIdMap[mExt]) outcomes[i].market_id = marketIdMap[mExt]
   }
-  await upsertOutcomes(db, outcomes)
+  const outcomesWithMarket = outcomes.filter(o => typeof o.market_id === "number")
+  const outcomesDeduped = uniqBy(outcomesWithMarket, o => [o.market_id, o.label, o.handicap])
+  await upsertOutcomes(db, outcomesDeduped)
 
   return { games: games.length }
 }
