@@ -15,6 +15,45 @@ const ui = getUi()
 const state = createState()
 const stats = createStats(ui)
 
+const SETTINGS_KEY = "os_tester_ui_settings_v1"
+function readSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+const settings = readSettings()
+function writeSetting(key, value) {
+  try {
+    settings[key] = value
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+  } catch {}
+}
+
+function initSettingCheckbox(el, key, defaultValue) {
+  if (!el) return
+  const v = settings[key]
+  el.checked = typeof v === "boolean" ? v : Boolean(defaultValue)
+}
+
+function initSettingNumber(el, key, defaultValue) {
+  if (!el) return
+  const v = settings[key]
+  const n = Number(v)
+  el.value = Number.isFinite(n) ? String(n) : String(defaultValue)
+}
+
+initSettingCheckbox(ui.onlyWithOdds, "onlyWithOdds", false)
+initSettingCheckbox(ui.hideEmptyCompetitions, "hideEmptyCompetitions", true)
+initSettingCheckbox(ui.oddsIncludeStale, "oddsIncludeStale", true)
+initSettingCheckbox(ui.oddsIncludeStarted, "oddsIncludeStarted", false)
+initSettingNumber(ui.oddsSeenMins, "oddsSeenMins", 180)
+
 function apiOddsPath() {
   const base = state.mode === "live" ? "/api/odds/live/football" : "/api/odds/prematch/football"
   const params = new URLSearchParams()
@@ -226,12 +265,14 @@ ui.refresh.addEventListener("click", () => loadOdds())
 
 ui.onlyWithOdds.addEventListener("change", () => {
   state.onlyWithOdds = Boolean(ui.onlyWithOdds.checked)
+  writeSetting("onlyWithOdds", state.onlyWithOdds)
   render()
 })
 
 if (ui.hideEmptyCompetitions) {
   ui.hideEmptyCompetitions.addEventListener("change", () => {
     state.hideEmptyCompetitions = Boolean(ui.hideEmptyCompetitions.checked)
+    writeSetting("hideEmptyCompetitions", state.hideEmptyCompetitions)
     render()
   })
 }
@@ -239,6 +280,7 @@ if (ui.hideEmptyCompetitions) {
 if (ui.oddsIncludeStale) {
   ui.oddsIncludeStale.addEventListener("change", () => {
     state.oddsIncludeStale = Boolean(ui.oddsIncludeStale.checked)
+    writeSetting("oddsIncludeStale", state.oddsIncludeStale)
     loadOdds()
   })
 }
@@ -246,6 +288,7 @@ if (ui.oddsIncludeStale) {
 if (ui.oddsIncludeStarted) {
   ui.oddsIncludeStarted.addEventListener("change", () => {
     state.oddsIncludeStarted = Boolean(ui.oddsIncludeStarted.checked)
+    writeSetting("oddsIncludeStarted", state.oddsIncludeStarted)
     loadOdds()
   })
 }
@@ -254,6 +297,7 @@ if (ui.oddsSeenMins) {
   ui.oddsSeenMins.addEventListener("change", () => {
     const n = Number(ui.oddsSeenMins.value)
     state.oddsSeenMins = Number.isFinite(n) ? Math.max(0, Math.min(10080, n)) : 180
+    writeSetting("oddsSeenMins", state.oddsSeenMins)
     loadOdds()
   })
 }

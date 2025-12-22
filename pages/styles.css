@@ -262,10 +262,16 @@
         user-select: none;
       }
 
-      .toggle-row input {
+      .toggle-row input[type="checkbox"] {
         width: 16px;
         height: 16px;
         accent-color: var(--green);
+      }
+
+      .toggle-row input[type="number"] {
+        width: 96px;
+        flex: none;
+        text-align: center;
       }
 
       .chip {
@@ -715,6 +721,10 @@
         color: var(--text);
         padding: 10px 12px;
         font-size: 13px;
+      }
+
+      .toggle-row input[type="number"].debug-input {
+        width: 110px;
       }
 
       .quick-row {
