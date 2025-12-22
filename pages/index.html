@@ -61,6 +61,55 @@
             <button id="debugToggle" class="chip" type="button">Debug</button>
           </section>
 
+          <section class="freshness" id="freshness">
+            <div class="freshness-head">
+              <div>
+                <div class="freshness-title">Prematch freshness</div>
+                <div class="freshness-sub">/api/test/stats?sportKey=football</div>
+              </div>
+              <div class="freshness-actions">
+                <button id="statsRefresh" class="chip" type="button">Refresh stats</button>
+              </div>
+            </div>
+
+            <div class="freshness-controls">
+              <label class="toggle-row" for="statsAuto" style="margin-top:0;">
+                <input id="statsAuto" type="checkbox" checked />
+                <span>Auto refresh (60s)</span>
+              </label>
+
+              <label class="toggle-row" for="statsSeenMins" style="margin-top:0;">
+                <span style="min-width: 170px;">Seen within (minutes)</span>
+                <input id="statsSeenMins" type="number" min="0" max="10080" value="180" class="debug-input" style="height: 38px; padding: 8px 10px;" />
+              </label>
+            </div>
+
+            <div class="freshness-grid">
+              <div class="freshness-card">
+                <div class="freshness-card-title">Fresh only (includeStale=0)</div>
+                <div class="freshness-metrics">
+                  <div class="freshness-metric"><span>Upcoming</span><b id="statsFreshUpcoming">—</b></div>
+                  <div class="freshness-metric"><span>Started/Now</span><b id="statsFreshStarted">—</b></div>
+                  <div class="freshness-metric"><span>Total</span><b id="statsFreshTotal">—</b></div>
+                </div>
+              </div>
+
+              <div class="freshness-card">
+                <div class="freshness-card-title">All (includeStale=1)</div>
+                <div class="freshness-metrics">
+                  <div class="freshness-metric"><span>Upcoming</span><b id="statsAllUpcoming">—</b></div>
+                  <div class="freshness-metric"><span>Started/Now</span><b id="statsAllStarted">—</b></div>
+                  <div class="freshness-metric"><span>Total</span><b id="statsAllTotal">—</b></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="freshness-foot">
+              <div class="pill" style="margin:0;">Delta (all - fresh): <b id="statsDelta">—</b></div>
+              <div class="pill" style="margin:0;">Updated: <b id="statsStamp">—</b></div>
+            </div>
+          </section>
+
           <section class="market">
             <div class="market-pill">
               <span class="dot"></span>
@@ -355,6 +404,97 @@
         gap: 12px;
         backdrop-filter: blur(14px);
         box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+      }
+
+      .freshness {
+        margin-top: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.45);
+        border-radius: 18px;
+        padding: 12px 14px;
+        backdrop-filter: blur(14px);
+      }
+
+      .freshness-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .freshness-title {
+        font-weight: 800;
+        color: var(--text);
+      }
+
+      .freshness-sub {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .freshness-controls {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .freshness-grid {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .freshness-card {
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.72);
+        border-radius: 16px;
+        padding: 12px;
+      }
+
+      .freshness-card-title {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        font-weight: 700;
+      }
+
+      .freshness-metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .freshness-metric {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: rgba(226, 232, 240, 0.92);
+      }
+
+      .freshness-metric span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .freshness-metric b {
+        font-weight: 900;
+      }
+
+      .freshness-foot {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
       }
 
       .hero-left {
@@ -691,6 +831,7 @@
         .league-list { max-height: none; }
         .match-card { grid-template-columns: 1fr; }
         .odds-head { width: 100%; }
+        .freshness-grid { grid-template-columns: 1fr; }
       }
     </style>
 
@@ -714,6 +855,17 @@
         pathInput: $("path"),
         send: $("send"),
         open: $("open"),
+        statsAuto: $("statsAuto"),
+        statsSeenMins: $("statsSeenMins"),
+        statsRefresh: $("statsRefresh"),
+        statsFreshUpcoming: $("statsFreshUpcoming"),
+        statsFreshStarted: $("statsFreshStarted"),
+        statsFreshTotal: $("statsFreshTotal"),
+        statsAllUpcoming: $("statsAllUpcoming"),
+        statsAllStarted: $("statsAllStarted"),
+        statsAllTotal: $("statsAllTotal"),
+        statsDelta: $("statsDelta"),
+        statsStamp: $("statsStamp"),
       };
 
       const state = {
@@ -728,6 +880,79 @@
         expandedMarkets: {},
         expandedCats: {},
       };
+
+      let statsInterval = null;
+
+      function statsPath(includeStale) {
+        const minsRaw = ui.statsSeenMins ? ui.statsSeenMins.value : "180";
+        const mins = Math.max(0, Math.min(10080, Number(minsRaw ?? "180") || 180));
+        const params = new URLSearchParams();
+        params.set("sportKey", "football");
+        params.set("seenWithinMinutes", String(mins));
+        if (includeStale) params.set("includeStale", "1");
+        return `/api/test/stats?${params.toString()}`;
+      }
+
+      function setText(el, v) {
+        if (!el) return;
+        el.textContent = v == null ? "—" : String(v);
+      }
+
+      async function loadStats() {
+        setText(ui.statsStamp, "Loading...");
+        try {
+          const [freshRes, allRes] = await Promise.all([
+            fetch(statsPath(false), { headers: { accept: "application/json" } }),
+            fetch(statsPath(true), { headers: { accept: "application/json" } }),
+          ]);
+
+          const freshTxt = await freshRes.text();
+          const allTxt = await allRes.text();
+
+          let fresh = null;
+          let all = null;
+          try { fresh = JSON.parse(freshTxt); } catch { fresh = { error: freshTxt }; }
+          try { all = JSON.parse(allTxt); } catch { all = { error: allTxt }; }
+
+          const fUp = fresh?.totals?.games_upcoming_strict;
+          const fSt = fresh?.totals?.games_started_or_now;
+          const fT = fresh?.totals?.games;
+
+          const aUp = all?.totals?.games_upcoming_strict;
+          const aSt = all?.totals?.games_started_or_now;
+          const aT = all?.totals?.games;
+
+          setText(ui.statsFreshUpcoming, fUp);
+          setText(ui.statsFreshStarted, fSt);
+          setText(ui.statsFreshTotal, fT);
+
+          setText(ui.statsAllUpcoming, aUp);
+          setText(ui.statsAllStarted, aSt);
+          setText(ui.statsAllTotal, aT);
+
+          const delta = (typeof aUp === "number" && typeof fUp === "number") ? (aUp - fUp) : null;
+          setText(ui.statsDelta, delta);
+
+          const stamp = new Date();
+          let stampStr = stamp.toISOString();
+          try {
+            stampStr = new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(stamp);
+          } catch {}
+          setText(ui.statsStamp, stampStr);
+        } catch (e) {
+          setText(ui.statsStamp, String(e));
+        }
+      }
+
+      function syncStatsInterval() {
+        if (statsInterval) {
+          clearInterval(statsInterval);
+          statsInterval = null;
+        }
+        if (ui.statsAuto && ui.statsAuto.checked) {
+          statsInterval = setInterval(loadStats, 60 * 1000);
+        }
+      }
 
       function apiOddsPath() {
         return state.mode === "live" ? "/api/odds/live/football" : "/api/odds/prematch/football";
@@ -1232,6 +1457,10 @@
 
       ui.send.addEventListener("click", () => send(ui.pathInput.value));
 
+      if (ui.statsRefresh) ui.statsRefresh.addEventListener("click", () => loadStats());
+      if (ui.statsAuto) ui.statsAuto.addEventListener("change", () => syncStatsInterval());
+      if (ui.statsSeenMins) ui.statsSeenMins.addEventListener("change", () => loadStats());
+
       document.querySelectorAll("button[data-path]").forEach((b) => {
         b.addEventListener("click", () => {
           const p = b.getAttribute("data-path");
@@ -1241,6 +1470,8 @@
       });
 
       loadOdds();
+      loadStats();
+      syncStatsInterval();
     </script>
   </body>
 </html>
