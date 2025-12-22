@@ -1,0 +1,74 @@
+      .debug {
+        margin-top: 16px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.55);
+        border-radius: 18px;
+        backdrop-filter: blur(14px);
+        overflow: hidden;
+      }
+
+      .hidden { display: none; }
+
+      .debug-head {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--stroke2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .debug-title { font-weight: 800; }
+
+      .debug-link {
+        color: var(--muted);
+        text-decoration: underline;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .debug-link:hover { color: var(--text); }
+
+      .debug-body { padding: 14px; }
+
+      .debug-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .debug-input {
+        width: 100%;
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.85);
+        color: var(--text);
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+
+      .toggle-row input[type="number"].debug-input {
+        width: 110px;
+      }
+
+      .quick-row {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .debug-out {
+        margin-top: 12px;
+        max-height: 380px;
+        overflow: auto;
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.85);
+        padding: 12px;
+        font-size: 12px;
+        color: var(--text);
+        line-height: 1.35;
+      }
+

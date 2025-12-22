@@ -1,0 +1,362 @@
+      .hero {
+        border: 1px solid var(--stroke2);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.75), rgba(2, 6, 23, 0.55));
+        border-radius: 22px;
+        padding: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        backdrop-filter: blur(14px);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+      }
+
+      .freshness {
+        margin-top: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.45);
+        border-radius: 18px;
+        padding: 12px 14px;
+        backdrop-filter: blur(14px);
+      }
+
+      .freshness-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .freshness-title {
+        font-weight: 800;
+        color: var(--text);
+      }
+
+      .freshness-sub {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .freshness-controls {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .freshness-grid {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .freshness-card {
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.72);
+        border-radius: 16px;
+        padding: 12px;
+      }
+
+      .freshness-card-title {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        font-weight: 700;
+      }
+
+      .freshness-metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .freshness-metric {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: rgba(226, 232, 240, 0.92);
+      }
+
+      .freshness-metric span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .freshness-metric b {
+        font-weight: 900;
+      }
+
+      .freshness-foot {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .hero-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      .hero-logo {
+        width: 56px;
+        height: 56px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        background: radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.20), rgba(2, 6, 23, 0.55));
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+
+      .hero-logo-inner {
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.12em;
+      }
+
+      .hero-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hero-sub {
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(16, 185, 129, 0.95);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
+      }
+
+      .market {
+        margin-top: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.45);
+        border-radius: 18px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        backdrop-filter: blur(14px);
+      }
+
+      .market-pill {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+      }
+
+      .odds-head {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        width: 330px;
+      }
+
+      .odds-head-cell {
+        border-radius: 12px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.70);
+        padding: 8px 10px;
+        text-align: center;
+        font-weight: 800;
+        color: var(--muted);
+      }
+
+      .odds-head-1 { color: rgba(16, 185, 129, 0.9); }
+      .odds-head-2 { color: rgba(244, 63, 94, 0.9); }
+
+      .day {
+        margin-top: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.45);
+        border-radius: 18px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        backdrop-filter: blur(14px);
+      }
+
+      .day-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .day-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.70);
+      }
+
+      .day-title {
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .pill {
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.75);
+        border-radius: 999px;
+        padding: 6px 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .match-list {
+        margin-top: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .match-card {
+        border: 1px solid var(--stroke2);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.70), rgba(2, 6, 23, 0.55));
+        border-radius: 22px;
+        padding: 14px;
+        display: grid;
+        grid-template-columns: 220px 1fr 330px;
+        gap: 14px;
+        backdrop-filter: blur(14px);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.30);
+      }
+
+      .match-left {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .time-pill {
+        width: fit-content;
+        border-radius: 12px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.80);
+        padding: 8px 12px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      .countdown {
+        width: fit-content;
+        border-radius: 12px;
+        border: 1px solid rgba(234, 179, 8, 0.28);
+        background: rgba(234, 179, 8, 0.08);
+        padding: 6px 10px;
+        font-size: 12px;
+        color: rgba(234, 179, 8, 0.95);
+        font-weight: 700;
+      }
+
+      .match-mid {
+        min-width: 0;
+      }
+
+      .league-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.75);
+        padding: 4px 10px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .teams {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .team {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .team-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.75);
+        color: var(--muted);
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        flex: none;
+      }
+
+      .team-name {
+        font-weight: 700;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .odds {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        align-content: center;
+      }
+
+      .odd {
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.75);
+        padding: 12px 10px;
+        text-align: center;
+        font-weight: 800;
+        color: var(--text);
+      }
+
+      .odd-missing {
+        color: rgba(148, 163, 184, 0.7);
+        font-weight: 700;
+      }
+

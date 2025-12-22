@@ -1,0 +1,274 @@
+      .sidebar {
+        border-right: 1px solid var(--stroke2);
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(2, 6, 23, 0.65), rgba(2, 6, 23, 0.35));
+      }
+
+      .sidebar-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.20), rgba(59, 130, 246, 0.05));
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        color: var(--text);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-title {
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1.1;
+      }
+
+      .brand-sub {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .sidebar-link {
+        color: var(--muted);
+        text-decoration: underline;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .sidebar-link:hover { color: var(--text); }
+
+      .sidebar-card {
+        border: 1px solid var(--stroke2);
+        background: var(--card);
+        border-radius: 18px;
+        padding: 14px;
+        backdrop-filter: blur(14px);
+        box-shadow: 0 20px 80px rgba(0, 0, 0, 0.25);
+        margin-bottom: 14px;
+      }
+
+      .sidebar-card-title {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+
+      .league-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: calc(100vh - 270px);
+        overflow: auto;
+        padding-right: 6px;
+      }
+
+      .country-item {
+        width: 100%;
+        text-align: left;
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.72);
+        padding: 12px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .country-item:hover { background: rgba(15, 23, 42, 0.72); }
+
+      .country-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .country-flag {
+        width: 18px;
+        height: 18px;
+        display: grid;
+        place-items: center;
+        flex: none;
+        opacity: 0.95;
+      }
+
+      .country-name {
+        font-weight: 800;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .country-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: none;
+      }
+
+      .country-caret {
+        opacity: 0.7;
+        font-weight: 900;
+        width: 18px;
+        text-align: center;
+      }
+
+      .league-sublist {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-left: 16px;
+      }
+
+      .league-item {
+        width: 100%;
+        text-align: left;
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.66);
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .league-item:hover { background: rgba(15, 23, 42, 0.68); }
+
+      .league-item-active {
+        border-color: rgba(16, 185, 129, 0.35);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+      }
+
+      .nav-item {
+        width: 100%;
+        text-align: left;
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.72);
+        padding: 12px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .nav-item:hover { background: rgba(15, 23, 42, 0.72); }
+
+      .nav-item-active {
+        border-color: rgba(16, 185, 129, 0.35);
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.16), rgba(2, 6, 23, 0.72));
+      }
+
+      .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .nav-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.35);
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.08);
+        flex: none;
+      }
+
+      .nav-item-active .nav-dot {
+        background: rgba(16, 185, 129, 0.9);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+      }
+
+      .nav-name {
+        font-weight: 600;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .nav-count {
+        color: var(--muted);
+        font-size: 12px;
+        border: 1px solid var(--stroke2);
+        padding: 2px 8px;
+        border-radius: 999px;
+        flex: none;
+      }
+
+      .chip-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .toggle-row {
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        user-select: none;
+      }
+
+      .toggle-row input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--green);
+      }
+
+      .toggle-row input[type="number"] {
+        width: 96px;
+        flex: none;
+        text-align: center;
+      }
+
+      .chip {
+        border-radius: 999px;
+        border: 1px solid var(--stroke2);
+        background: var(--chip);
+        padding: 7px 12px;
+        font-size: 12px;
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      .chip:hover { background: var(--chipHover); }
+
+      .chip-active {
+        border-color: rgba(16, 185, 129, 0.35);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+      }
+
+      .sidebar-foot {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .foot-note {
+        opacity: 0.9;
+        line-height: 1.3;
+      }
+

@@ -1,0 +1,8 @@
+      @media (max-width: 1040px) {
+        .app { grid-template-columns: 1fr; }
+        .sidebar { border-right: none; border-bottom: 1px solid var(--stroke2); }
+        .league-list { max-height: none; }
+        .match-card { grid-template-columns: 1fr; }
+        .odds-head { width: 100%; }
+        .freshness-grid { grid-template-columns: 1fr; }
+      }
