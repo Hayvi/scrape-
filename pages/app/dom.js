@@ -1,0 +1,37 @@
+export const $ = (id) => document.getElementById(id)
+
+export function getUi() {
+  return {
+    leagueList: $("leagueList"),
+    leagueName: $("leagueName"),
+    leagueDate: $("leagueDate"),
+    dayLabel: $("dayLabel"),
+    matchCount: $("matchCount"),
+    matchList: $("matchList"),
+    modePrematch: $("modePrematch"),
+    modeLive: $("modeLive"),
+    refresh: $("refresh"),
+    onlyWithOdds: $("onlyWithOdds"),
+    hideEmptyCompetitions: $("hideEmptyCompetitions"),
+    oddsIncludeStale: $("oddsIncludeStale"),
+    oddsIncludeStarted: $("oddsIncludeStarted"),
+    oddsSeenMins: $("oddsSeenMins"),
+    debugToggle: $("debugToggle"),
+    debugPanel: $("debugPanel"),
+    out: $("out"),
+    pathInput: $("path"),
+    send: $("send"),
+    open: $("open"),
+    statsAuto: $("statsAuto"),
+    statsSeenMins: $("statsSeenMins"),
+    statsRefresh: $("statsRefresh"),
+    statsFreshUpcoming: $("statsFreshUpcoming"),
+    statsFreshStarted: $("statsFreshStarted"),
+    statsFreshTotal: $("statsFreshTotal"),
+    statsAllUpcoming: $("statsAllUpcoming"),
+    statsAllStarted: $("statsAllStarted"),
+    statsAllTotal: $("statsAllTotal"),
+    statsDelta: $("statsDelta"),
+    statsStamp: $("statsStamp"),
+  }
+}

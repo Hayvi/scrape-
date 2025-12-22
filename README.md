@@ -45,6 +45,11 @@ Tables used:
 - `outcomes`
 - `live_meta`
 
+## Market parsing note
+
+- The upstream `MatchOddsGrouped` payload contains many distinct markets that may share similar names.
+- Markets are stored with a unique `external_id` per match+market row to avoid upsert collisions.
+
 ## HTTP API
 
 Base URL (example): `https://<your-worker>.workers.dev`
@@ -54,6 +59,10 @@ Base URL (example): `https://<your-worker>.workers.dev`
 This repo also includes a tiny Cloudflare Pages site to test the Worker endpoints from the browser.
 
 - Static UI: `pages/index.html`
+- Static assets:
+  - `pages/styles.css`
+  - `pages/app/index.js` (ES module entrypoint)
+  - `pages/app/*.js` (small UI modules)
 - Proxy function: `functions/api/[[path]].ts`
 
 The UI calls `/api/...` on the Pages domain, and the Pages Function proxies those requests to your Worker.
@@ -74,6 +83,14 @@ In Cloudflare Dashboard:
 - **Functions directory**: `functions`
 
 After deploy, open the Pages site root (`/`) and use the buttons / custom path box.
+
+### UI notes
+
+- Markets are grouped into categories (Populaire / BUTS / HANDICAP / ...) and show both counts:
+  - `X markets / Y outcomes`
+- Sidebar includes:
+  - `Only show games with 1X2 odds`
+  - `Hide competitions with 0 games`
 
 ### Health / config
 
@@ -220,6 +237,14 @@ npx wrangler dev
 ```bash
 npm install
 npx wrangler deploy
+```
+
+## Local development (Pages UI)
+
+To run the tester UI locally (including the `/api/*` proxy), bind `API_BASE_URL` to your worker:
+
+```bash
+npx wrangler pages dev ./pages -b API_BASE_URL=https://odds-scraper-worker.ghzwael.workers.dev
 ```
 
 If your system Node.js is old, you can deploy with a temporary Node 20 + wrangler:

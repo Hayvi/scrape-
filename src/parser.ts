@@ -27,7 +27,8 @@ export function parseMatchOddsGrouped(html: string, matchId: string): ParsedMark
     if (nameM) currentMarketName = decodeEntities(nameM[1].replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim())
 
     const hM = block.match(/<div[^>]*class=["']divOddSpecial["'][^>]*>[\s\S]*?<label[^>]*>([\s\S]*?)<\/label>/i)
-    const handicap = hM ? Number((decodeEntities(hM[1]).trim()).replace(",", ".")) : null
+    const rawHandicap = hM ? Number((decodeEntities(hM[1]).trim()).replace(",", ".")) : null
+    const handicap = typeof rawHandicap === "number" && Number.isFinite(rawHandicap) ? rawHandicap : null
 
     const oRe = /<(div|span)[^>]*data-matchoddid=["'](\d+)["'][^>]*>[\s\S]*?<\/\1>/gi
     let om: RegExpExecArray | null
@@ -55,7 +56,9 @@ export function parseMatchOddsGrouped(html: string, matchId: string): ParsedMark
     const marketName = currentMarketName ?? "Market"
     const keyBase = mapMarketKey(marketName)
     const key = handicap !== null ? `${keyBase}` : keyBase
-    const external_id = handicap !== null ? `${keyBase}_${handicap}` : keyBase
+    const marketUid = outcomes[0]?.external_id ? String(outcomes[0].external_id) : String(i)
+    const externalParts = handicap !== null ? [keyBase, String(handicap), marketUid] : [keyBase, marketUid]
+    const external_id = externalParts.join("_")
     markets.push({ key, name: marketName, external_id: `${matchId}_${external_id}`, outcomes })
   }
   return markets
