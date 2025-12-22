@@ -29,7 +29,7 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
 
   const EMPTY_STREAK_LIMIT = 8
 
-  const batch = Math.max(1, Math.min(5, Number(opts?.batch ?? 3) || 3))
+  const batch = Math.max(1, Math.min(20, Number(opts?.batch ?? 3) || 3))
   let tasks = await claimScrapeTasks(db, SOURCE, "prematch_catalog_page", batch, lockOwner)
   if (!tasks.length) {
     const nowIso = new Date().toISOString()
@@ -85,7 +85,7 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
     fail: 0,
     processed: []
   }
-  const oneHourLater = () => new Date(Date.now() + 60 * 60 * 1000).toISOString()
+  const tenMinutesLater = () => new Date(Date.now() + 10 * 60 * 1000).toISOString()
   const sixHoursLater = () => new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString()
   const backoffLater = (attempts: number) => new Date(Date.now() + Math.min(60, 5 * Math.max(1, attempts)) * 60 * 1000).toISOString()
 
@@ -164,7 +164,7 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
   }
 
   if (successIds.length) {
-    const next = oneHourLater()
+    const next = tenMinutesLater()
     const nextEmpty = sixHoursLater()
     const now = new Date().toISOString()
 
