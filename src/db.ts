@@ -111,3 +111,40 @@ export async function upsertLiveMeta(db: SupabaseClient, rows: LiveMetaRow[]) {
   const { error } = await db.from("live_meta").upsert(rows, { onConflict: "provider_key" })
   if (error) throw new Error(`upsertLiveMeta failed: ${JSON.stringify(error)}`)
 }
+
+export type ScrapeQueueRow = {
+  id?: number
+  source: string
+  task: string
+  external_id: string
+  status?: string
+  priority?: number
+  not_before_at?: string | null
+  locked_at?: string | null
+  lock_owner?: string | null
+  attempts?: number
+  last_error?: string | null
+  last_success_at?: string | null
+}
+
+export async function upsertScrapeQueue(db: SupabaseClient, rows: ScrapeQueueRow[]) {
+  if (!rows.length) return
+  const { error } = await db.from("scrape_queue").upsert(rows, { onConflict: "source,task,external_id" })
+  if (error) throw new Error(`upsertScrapeQueue failed: ${JSON.stringify(error)}`)
+}
+
+export async function claimScrapeTasks(db: SupabaseClient, source: string, task: string, limit: number, lockOwner: string) {
+  const { data, error } = await db.rpc("claim_scrape_tasks", {
+    p_source: source,
+    p_task: task,
+    p_limit: limit,
+    p_lock_owner: lockOwner
+  })
+  if (error) throw new Error(`claimScrapeTasks failed: ${JSON.stringify(error)}`)
+  return (data ?? []) as any[]
+}
+
+export async function updateScrapeTask(db: SupabaseClient, id: number, patch: Partial<ScrapeQueueRow>) {
+  const { error } = await db.from("scrape_queue").update(patch).eq("id", id)
+  if (error) throw new Error(`updateScrapeTask failed: ${JSON.stringify(error)}`)
+}

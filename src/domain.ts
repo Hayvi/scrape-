@@ -22,6 +22,7 @@ export interface Game {
   home_team: string
   away_team: string
   start_time: string
+  last_seen_at?: string
   live: boolean
 }
 

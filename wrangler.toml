@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
 [triggers]
-crons = ["*/10 * * * *", "*/1 * * * *"]
+crons = ["*/1 * * * *", "0 * * * *", "5 */6 * * *"]
 
 [vars]
 DEFAULT_SPORT_ID = "1181"

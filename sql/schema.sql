@@ -88,3 +88,74 @@ create table if not exists live_meta (
 create index if not exists live_meta_provider_idx on live_meta(provider);
 create index if not exists live_meta_provider_ls_id_idx on live_meta(provider_ls_id);
 create index if not exists live_meta_start_time_idx on live_meta(start_time);
+
+create table if not exists scrape_queue (
+  id bigserial primary key,
+  source text not null,
+  task text not null,
+  external_id text not null,
+  status text not null default 'pending',
+  priority integer not null default 0,
+  not_before_at timestamptz,
+  locked_at timestamptz,
+  lock_owner text,
+  attempts integer not null default 0,
+  last_error text,
+  last_success_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(source, task, external_id)
+);
+
+create index if not exists scrape_queue_due_idx on scrape_queue(source, task, status, not_before_at);
+create index if not exists scrape_queue_locked_idx on scrape_queue(source, task, locked_at);
+
+create or replace function claim_scrape_tasks(p_source text, p_task text, p_limit integer, p_lock_owner text)
+returns setof scrape_queue
+language plpgsql
+as $$
+begin
+  return query
+  update scrape_queue
+  set
+    status = 'running',
+    locked_at = now(),
+    lock_owner = p_lock_owner,
+    attempts = attempts + 1,
+    updated_at = now()
+  where id in (
+    select id
+    from scrape_queue
+    where source = p_source
+      and task = p_task
+      and (
+        (status = 'pending' and (not_before_at is null or not_before_at <= now()))
+        or (status = 'running' and locked_at is not null and locked_at < now() - interval '15 minutes')
+      )
+    order by priority desc, not_before_at asc nulls first, created_at asc
+    limit greatest(p_limit, 0)
+    for update skip locked
+  )
+  returning *;
+end;
+$$;
+
+create or replace function stats_prematch_complete_1x2(p_source text)
+returns table(games_with_complete_1x2 bigint)
+language sql
+stable
+as $$
+  select count(*)::bigint as games_with_complete_1x2
+  from (
+    select m.game_id
+    from markets m
+    join outcomes o on o.market_id = m.id
+    join games g on g.id = m.game_id
+    where m.source = p_source
+      and g.source = p_source
+      and g.live = false
+      and m.key = '1x2'
+    group by m.game_id
+    having count(distinct o.label) >= 3
+  ) x;
+$$;

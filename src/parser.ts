@@ -489,3 +489,99 @@ export function parsePrematchNextMatches(html: string, sportId: string): ParsedS
   if (!leagues.length) return []
   return [{ key: sportKey, name: sportName, external_id: sportId, leagues }]
 }
+
+function parseMatchListTeams(rowHtml: string): { home: string; away: string } | null {
+  const home1 = rowHtml.match(/<div[^>]*class=["'][^"']*competitor1-name[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1]
+  const away1 = rowHtml.match(/<div[^>]*class=["'][^"']*competitor2-name[^"']*["'][^>]*>([\s\S]*?)<\/div>/i)?.[1]
+  if (home1 && away1) {
+    const home = decodeEntities(home1).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+    const away = decodeEntities(away1).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+    if (home && away) return { home, away }
+  }
+  return null
+}
+
+function parseMatchListStartIso(dateDdMmYyyy: string | null, rowHtml: string): string {
+  const rowDate = rowHtml.match(/(\d{2}\/\d{2}\/\d{4})/)?.[1] ?? null
+  const usedDate = dateDdMmYyyy ?? rowDate
+  const timeM = rowHtml.match(/>\s*(\d{2}:\d{2})(?::\d{2})?\s*</)
+  if (usedDate && timeM) {
+    const [d, mth, y] = usedDate.split("/")
+    const t = timeM[1].length === 5 ? `${timeM[1]}:00` : timeM[1]
+    return new Date(`${y}-${mth}-${d}T${t}Z`).toISOString()
+  }
+  return new Date().toISOString()
+}
+
+function extractMatchListSections(html: string) {
+  const scope = html
+  const sections: { tournamentId: string | null; name: string; rows: { html: string; date: string | null }[] }[] = []
+
+  const headerRe = /<tr[^>]*class=["'][^"']*header_tournament_row[^"']*["'][^>]*>[\s\S]*?<\/tr>/gi
+  const indices: { idx: number; block: string }[] = []
+  let hm: RegExpExecArray | null
+  while ((hm = headerRe.exec(scope)) !== null) indices.push({ idx: hm.index, block: hm[0] })
+  if (!indices.length) return sections
+  indices.push({ idx: scope.length, block: "" })
+
+  for (let i = 0; i < indices.length - 1; i++) {
+    const headerHtml = indices[i].block
+    const tournamentId = headerHtml.match(/data-tournamentid=["'](\d+)["']/i)?.[1] ?? null
+    const nameM = headerHtml.match(/<div[^>]*class=["']category-tournament-title["'][^>]*>([\s\S]*?)<\/div>/i)?.[1]
+    const name = decodeEntities(String(nameM ?? "").replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim() || "Tournament"
+
+    const block = scope.slice(indices[i].idx, indices[i + 1].idx)
+
+    const rows: { html: string; date: string | null }[] = []
+    const trRe = /<tr[^>]*>[\s\S]*?<\/tr>/gi
+    let rm: RegExpExecArray | null
+    let currentDate: string | null = null
+    while ((rm = trRe.exec(block)) !== null) {
+      const tr = rm[0]
+      const hasMatch = /data-matchid=["'](\d+)["']/i.test(tr)
+      const dateM = tr.match(/(\d{2}\/\d{2}\/\d{4})/)
+      if (!hasMatch && dateM) {
+        currentDate = dateM[1]
+        continue
+      }
+      if (hasMatch) {
+        rows.push({ html: tr, date: currentDate })
+      }
+    }
+
+    if (rows.length) sections.push({ tournamentId, name, rows })
+  }
+  return sections
+}
+
+export function parsePrematchSportMatchList(html: string, sportId: string): ParsedSport[] {
+  const sportKey = sportId === "1181" ? "football" : `sport-${sportId}`
+  const sportName = sportId === "1181" ? "Football" : `Sport ${sportId}`
+
+  const leagues: ParsedSport["leagues"] = []
+  const sections = extractMatchListSections(html)
+  for (const s of sections) {
+    const games: any[] = []
+    for (const entry of s.rows) {
+      const row = entry.html
+      const matchId = row.match(/data-matchid=["'](\d+)["']/i)?.[1] ?? null
+      if (!matchId) continue
+      const teams = parseMatchListTeams(row)
+      if (!teams) continue
+      games.push({
+        external_id: matchId,
+        home_team: teams.home,
+        away_team: teams.away,
+        start_time: parseMatchListStartIso(entry.date, row),
+        live: false,
+        markets: []
+      })
+    }
+    if (!games.length) continue
+    const ext = `prematch_${sportId}_${s.tournamentId ?? (slugify(s.name) || "tournament")}`
+    leagues.push({ name: s.name, external_id: ext, games })
+  }
+
+  if (!leagues.length) return []
+  return [{ key: sportKey, name: sportName, external_id: sportId, leagues }]
+}

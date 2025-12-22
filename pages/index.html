@@ -7,81 +7,1162 @@
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body class="bg-slate-950 text-slate-100">
-    <div class="mx-auto max-w-5xl px-4 py-10">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-semibold">Odds Scraper Tester</h1>
-          <p class="text-slate-300 mt-1">Small frontend for testing the Worker API via a Cloudflare Pages proxy.</p>
-        </div>
-        <a class="text-slate-300 hover:text-white underline" href="/api/test/env" target="_blank" rel="noreferrer">/api/test/env</a>
-      </div>
-
-      <div class="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
-          <h2 class="text-lg font-medium">Quick actions</h2>
-          <div class="mt-4 grid grid-cols-1 gap-3">
-            <button class="btn" data-path="/api/test/live?persist=0&deep=0&limit=5">Test live (no persist)</button>
-            <button class="btn" data-path="/api/test/live?persist=1&deep=1&limit=5">Test live (persist=1, deep=1)</button>
-            <button class="btn" data-path="/api/test/prematch?persist=0&deep=0&limit=5">Test prematch (no persist)</button>
-            <button class="btn" data-path="/api/test/prematch?persist=1&deep=1&limit=5">Test prematch (persist=1, deep=1)</button>
-            <button class="btn" data-path="/api/odds/prematch/football">Read prematch odds (football)</button>
-            <button class="btn" data-path="/api/odds/live/football">Read live odds (football)</button>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <div class="brand">
+            <div class="brand-badge">OS</div>
+            <div>
+              <div class="brand-title">Odds Scraper</div>
+              <div class="brand-sub">Tester UI</div>
+            </div>
           </div>
+          <a class="sidebar-link" href="/api/test/env" target="_blank" rel="noreferrer">/api/test/env</a>
         </div>
 
-        <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
-          <h2 class="text-lg font-medium">Custom request</h2>
-          <p class="mt-1 text-sm text-slate-300">Requests are sent to this Pages site, which proxies <code class="rounded bg-slate-800 px-1 py-0.5">/api/*</code> to your Worker.</p>
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Competitions</div>
+          <div id="leagueList" class="league-list"></div>
+        </div>
 
-          <label class="mt-4 block text-sm text-slate-300">Path</label>
-          <input id="path" class="mt-2 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-slate-100" value="/api/test/live?persist=0&deep=0&limit=5" />
-
-          <div class="mt-3 flex items-center gap-3">
-            <button id="send" class="btn">Send</button>
-            <a id="open" class="text-slate-300 hover:text-white underline" href="#" target="_blank" rel="noreferrer">Open in new tab</a>
+        <div class="sidebar-card">
+          <div class="sidebar-card-title">Mode</div>
+          <div class="chip-row">
+            <button id="modePrematch" class="chip chip-active" type="button">Prematch</button>
+            <button id="modeLive" class="chip" type="button">Live</button>
+            <button id="refresh" class="chip" type="button">Refresh</button>
           </div>
-
-          <label class="mt-5 block text-sm text-slate-300">Response</label>
-          <pre id="out" class="mt-2 max-h-[520px] overflow-auto rounded-lg border border-slate-800 bg-slate-950 p-3 text-xs leading-relaxed"></pre>
+          <label class="toggle-row" for="onlyWithOdds">
+            <input id="onlyWithOdds" type="checkbox" checked />
+            <span>Only show games with 1X2 odds</span>
+          </label>
         </div>
-      </div>
 
-      <div class="mt-8 rounded-xl border border-slate-800 bg-slate-900/40 p-5 text-sm text-slate-300">
-        <div class="font-medium text-slate-100">Notes</div>
-        <div class="mt-2">
-          <div>- This UI is deployed on Cloudflare Pages.</div>
-          <div>- The proxy target is controlled by the Pages environment variable <code class="rounded bg-slate-800 px-1 py-0.5">API_BASE_URL</code>.</div>
+        <div class="sidebar-foot">
+          <div class="foot-note">Proxy target is controlled by Pages secret <code>API_BASE_URL</code>.</div>
         </div>
-      </div>
+      </aside>
+
+      <main class="main">
+        <div class="main-inner">
+          <section class="hero" id="hero">
+            <div class="hero-left">
+              <div class="hero-logo">
+                <div class="hero-logo-inner">UEFA</div>
+              </div>
+              <div>
+                <div id="leagueName" class="hero-title">Loading...</div>
+                <div class="hero-sub">
+                  <span class="dot"></span>
+                  <span id="leagueDate">—</span>
+                </div>
+              </div>
+            </div>
+            <button id="debugToggle" class="chip" type="button">Debug</button>
+          </section>
+
+          <section class="market">
+            <div class="market-pill">
+              <span class="dot"></span>
+              <span>MATCH</span>
+            </div>
+            <div class="odds-head">
+              <div class="odds-head-cell odds-head-1">1</div>
+              <div class="odds-head-cell odds-head-x">X</div>
+              <div class="odds-head-cell odds-head-2">2</div>
+            </div>
+          </section>
+
+          <section class="day">
+            <div class="day-left">
+              <div class="day-icon">📅</div>
+              <div>
+                <div id="dayLabel" class="day-title">—</div>
+              </div>
+            </div>
+            <div id="matchCount" class="pill">0 Matchs</div>
+          </section>
+
+          <section id="matchList" class="match-list"></section>
+
+          <section id="debugPanel" class="debug hidden">
+            <div class="debug-head">
+              <div class="debug-title">Debug</div>
+              <a id="open" class="debug-link" href="#" target="_blank" rel="noreferrer">Open in new tab</a>
+            </div>
+            <div class="debug-body">
+              <div class="debug-row">
+                <input
+                  id="path"
+                  class="debug-input"
+                  value="/api/odds/prematch/football"
+                  spellcheck="false"
+                  autocomplete="off"
+                />
+                <button id="send" class="chip" type="button">Send</button>
+              </div>
+
+              <div class="quick-row">
+                <button class="chip" type="button" data-path="/api/test/live?persist=0&deep=0&limit=5">Test live</button>
+                <button class="chip" type="button" data-path="/api/test/prematch?persist=0&deep=0&limit=5">Test prematch</button>
+                <button class="chip" type="button" data-path="/api/odds/prematch/football">Read prematch odds</button>
+                <button class="chip" type="button" data-path="/api/odds/live/football">Read live odds</button>
+              </div>
+
+              <pre id="out" class="debug-out"></pre>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
 
     <style>
-      .btn {
-        border-radius: 0.5rem;
-        border: 1px solid rgb(51 65 85);
-        background: rgb(2 6 23);
-        padding: 0.5rem 0.75rem;
-        text-align: left;
-        width: 100%;
+      :root {
+        --bg0: #040713;
+        --bg1: #070d1f;
+        --card: rgba(10, 14, 30, 0.65);
+        --stroke: rgba(148, 163, 184, 0.18);
+        --stroke2: rgba(148, 163, 184, 0.12);
+        --text: rgb(226 232 240);
+        --muted: rgb(148 163 184);
+        --chip: rgba(2, 6, 23, 0.9);
+        --chipHover: rgba(15, 23, 42, 0.95);
+        --green: rgb(16 185 129);
+        --red: rgb(244 63 94);
       }
-      .btn:hover { background: rgb(15 23 42); }
+
+      body {
+        background:
+          radial-gradient(900px 500px at 20% 10%, rgba(59, 130, 246, 0.12), transparent 60%),
+          radial-gradient(900px 600px at 85% 20%, rgba(16, 185, 129, 0.10), transparent 55%),
+          linear-gradient(180deg, var(--bg0), var(--bg1));
+        min-height: 100vh;
+      }
+
       code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+      .app {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--stroke2);
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(2, 6, 23, 0.65), rgba(2, 6, 23, 0.35));
+      }
+
+      .sidebar-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-badge {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.20), rgba(59, 130, 246, 0.05));
+        border: 1px solid rgba(59, 130, 246, 0.25);
+        color: var(--text);
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .brand-title {
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1.1;
+      }
+
+      .brand-sub {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .sidebar-link {
+        color: var(--muted);
+        text-decoration: underline;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .sidebar-link:hover { color: var(--text); }
+
+      .sidebar-card {
+        border: 1px solid var(--stroke2);
+        background: var(--card);
+        border-radius: 18px;
+        padding: 14px;
+        backdrop-filter: blur(14px);
+        box-shadow: 0 20px 80px rgba(0, 0, 0, 0.25);
+        margin-bottom: 14px;
+      }
+
+      .sidebar-card-title {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+
+      .league-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-height: calc(100vh - 270px);
+        overflow: auto;
+        padding-right: 6px;
+      }
+
+      .nav-item {
+        width: 100%;
+        text-align: left;
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.72);
+        padding: 12px 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .nav-item:hover { background: rgba(15, 23, 42, 0.72); }
+
+      .nav-item-active {
+        border-color: rgba(16, 185, 129, 0.35);
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.16), rgba(2, 6, 23, 0.72));
+      }
+
+      .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .nav-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.35);
+        box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.08);
+        flex: none;
+      }
+
+      .nav-item-active .nav-dot {
+        background: rgba(16, 185, 129, 0.9);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+      }
+
+      .nav-name {
+        font-weight: 600;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .nav-count {
+        color: var(--muted);
+        font-size: 12px;
+        border: 1px solid var(--stroke2);
+        padding: 2px 8px;
+        border-radius: 999px;
+        flex: none;
+      }
+
+      .chip-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .toggle-row {
+        margin-top: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+        user-select: none;
+      }
+
+      .toggle-row input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--green);
+      }
+
+      .chip {
+        border-radius: 999px;
+        border: 1px solid var(--stroke2);
+        background: var(--chip);
+        padding: 7px 12px;
+        font-size: 12px;
+        color: var(--text);
+        white-space: nowrap;
+      }
+
+      .chip:hover { background: var(--chipHover); }
+
+      .chip-active {
+        border-color: rgba(16, 185, 129, 0.35);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08);
+      }
+
+      .sidebar-foot {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .foot-note {
+        opacity: 0.9;
+        line-height: 1.3;
+      }
+
+      .main {
+        padding: 22px;
+      }
+
+      .main-inner {
+        max-width: 980px;
+        margin: 0 auto;
+      }
+
+      .hero {
+        border: 1px solid var(--stroke2);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.75), rgba(2, 6, 23, 0.55));
+        border-radius: 22px;
+        padding: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        backdrop-filter: blur(14px);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+      }
+
+      .hero-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+      }
+
+      .hero-logo {
+        width: 56px;
+        height: 56px;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        background: radial-gradient(circle at 30% 20%, rgba(59, 130, 246, 0.20), rgba(2, 6, 23, 0.55));
+        display: grid;
+        place-items: center;
+        flex: none;
+      }
+
+      .hero-logo-inner {
+        font-size: 11px;
+        color: var(--muted);
+        letter-spacing: 0.12em;
+      }
+
+      .hero-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hero-sub {
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(16, 185, 129, 0.95);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.10);
+      }
+
+      .market {
+        margin-top: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.45);
+        border-radius: 18px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        backdrop-filter: blur(14px);
+      }
+
+      .market-pill {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--text);
+        font-weight: 700;
+        font-size: 13px;
+        letter-spacing: 0.02em;
+      }
+
+      .odds-head {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        width: 330px;
+      }
+
+      .odds-head-cell {
+        border-radius: 12px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.70);
+        padding: 8px 10px;
+        text-align: center;
+        font-weight: 800;
+        color: var(--muted);
+      }
+
+      .odds-head-1 { color: rgba(16, 185, 129, 0.9); }
+      .odds-head-2 { color: rgba(244, 63, 94, 0.9); }
+
+      .day {
+        margin-top: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.45);
+        border-radius: 18px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        backdrop-filter: blur(14px);
+      }
+
+      .day-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .day-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.70);
+      }
+
+      .day-title {
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .pill {
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.75);
+        border-radius: 999px;
+        padding: 6px 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .match-list {
+        margin-top: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .match-card {
+        border: 1px solid var(--stroke2);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.70), rgba(2, 6, 23, 0.55));
+        border-radius: 22px;
+        padding: 14px;
+        display: grid;
+        grid-template-columns: 220px 1fr 330px;
+        gap: 14px;
+        backdrop-filter: blur(14px);
+        box-shadow: 0 30px 90px rgba(0, 0, 0, 0.30);
+      }
+
+      .match-left {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .time-pill {
+        width: fit-content;
+        border-radius: 12px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.80);
+        padding: 8px 12px;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+      }
+
+      .countdown {
+        width: fit-content;
+        border-radius: 12px;
+        border: 1px solid rgba(234, 179, 8, 0.28);
+        background: rgba(234, 179, 8, 0.08);
+        padding: 6px 10px;
+        font-size: 12px;
+        color: rgba(234, 179, 8, 0.95);
+        font-weight: 700;
+      }
+
+      .match-mid {
+        min-width: 0;
+      }
+
+      .league-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.75);
+        padding: 4px 10px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .teams {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .team {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .team-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.75);
+        color: var(--muted);
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        flex: none;
+      }
+
+      .team-name {
+        font-weight: 700;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .odds {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        align-content: center;
+      }
+
+      .odd {
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.75);
+        padding: 12px 10px;
+        text-align: center;
+        font-weight: 800;
+        color: var(--text);
+      }
+
+      .odd-missing {
+        color: rgba(148, 163, 184, 0.7);
+        font-weight: 700;
+      }
+
+      .debug {
+        margin-top: 16px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.55);
+        border-radius: 18px;
+        backdrop-filter: blur(14px);
+        overflow: hidden;
+      }
+
+      .hidden { display: none; }
+
+      .debug-head {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--stroke2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .debug-title { font-weight: 800; }
+
+      .debug-link {
+        color: var(--muted);
+        text-decoration: underline;
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .debug-link:hover { color: var(--text); }
+
+      .debug-body { padding: 14px; }
+
+      .debug-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .debug-input {
+        width: 100%;
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.85);
+        color: var(--text);
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+
+      .quick-row {
+        margin-top: 12px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .debug-out {
+        margin-top: 12px;
+        max-height: 380px;
+        overflow: auto;
+        border-radius: 14px;
+        border: 1px solid var(--stroke2);
+        background: rgba(2, 6, 23, 0.85);
+        padding: 12px;
+        font-size: 12px;
+        color: var(--text);
+        line-height: 1.35;
+      }
+
+      @media (max-width: 1040px) {
+        .app { grid-template-columns: 1fr; }
+        .sidebar { border-right: none; border-bottom: 1px solid var(--stroke2); }
+        .league-list { max-height: none; }
+        .match-card { grid-template-columns: 1fr; }
+        .odds-head { width: 100%; }
+      }
     </style>
 
     <script>
       const $ = (id) => document.getElementById(id);
-      const out = $("out");
-      const pathInput = $("path");
-      const openLink = $("open");
 
-      function setPath(p) {
-        pathInput.value = p;
-        openLink.href = p;
+      const ui = {
+        leagueList: $("leagueList"),
+        leagueName: $("leagueName"),
+        leagueDate: $("leagueDate"),
+        dayLabel: $("dayLabel"),
+        matchCount: $("matchCount"),
+        matchList: $("matchList"),
+        modePrematch: $("modePrematch"),
+        modeLive: $("modeLive"),
+        refresh: $("refresh"),
+        onlyWithOdds: $("onlyWithOdds"),
+        debugToggle: $("debugToggle"),
+        debugPanel: $("debugPanel"),
+        out: $("out"),
+        pathInput: $("path"),
+        send: $("send"),
+        open: $("open"),
+      };
+
+      const state = {
+        mode: "prematch",
+        data: null,
+        selectedLeagueId: null,
+        debugOpen: false,
+        onlyWithOdds: true,
+        expanded: {},
+        expandedLoading: {},
+        expandedError: {},
+        expandedMarkets: {},
+        expandedCats: {},
+      };
+
+      function apiOddsPath() {
+        return state.mode === "live" ? "/api/odds/live/football" : "/api/odds/prematch/football";
+      }
+
+      function formatDateLong(d) {
+        try {
+          return new Intl.DateTimeFormat(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }).format(d);
+        } catch {
+          return d.toISOString();
+        }
+      }
+
+      function formatDayShort(d) {
+        try {
+          return new Intl.DateTimeFormat(undefined, { weekday: "long", day: "2-digit", month: "long" }).format(d);
+        } catch {
+          return d.toISOString();
+        }
+      }
+
+      function safeNumber(x) {
+        const n = typeof x === "number" ? x : Number(x);
+        return Number.isFinite(n) ? n : null;
+      }
+
+      function formatOdd(x) {
+        const n = safeNumber(x);
+        if (n === null) return null;
+        return n.toFixed(2);
+      }
+
+      function normalizeLabel(s) {
+        return String(s ?? "")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, " ");
+      }
+
+      function normalizeTeamName(s) {
+        return normalizeLabel(s)
+          .replace(/\([^)]*\)/g, " ")
+          .replace(/[^a-z0-9 ]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function pick1x2Market(markets) {
+        const arr = Array.isArray(markets) ? markets : [];
+        const byKey = arr.find((m) => normalizeLabel(m.key) === "match" || normalizeLabel(m.key) === "1x2");
+        if (byKey) return byKey;
+        const byName = arr.find((m) => {
+          const n = normalizeLabel(m.name);
+          return n.includes("match") || n.includes("1x2") || n.includes("1 x 2");
+        });
+        if (byName) return byName;
+        return arr[0] ?? null;
+      }
+
+      function extract1x2Odds(game) {
+        const market = pick1x2Market(game?.markets);
+        const outcomes = Array.isArray(market?.outcomes) ? market.outcomes : [];
+        const mapped = { home: null, draw: null, away: null };
+        const homeN = normalizeTeamName(game?.homeTeam);
+        const awayN = normalizeTeamName(game?.awayTeam);
+        for (const o of outcomes) {
+          const lab = normalizeLabel(o.label);
+          const price = formatOdd(o.price);
+          if (!price) continue;
+          if (lab === "1" || lab.includes("home") || lab.includes("team 1") || lab.includes("team1")) mapped.home = price;
+          else if (lab === "x" || lab.includes("draw") || lab.includes("nul")) mapped.draw = price;
+          else if (lab === "2" || lab.includes("away") || lab.includes("team 2") || lab.includes("team2")) mapped.away = price;
+          else {
+            const t = normalizeTeamName(o.label);
+            if (t && homeN && (t === homeN || homeN.includes(t) || t.includes(homeN))) mapped.home = price;
+            else if (t && awayN && (t === awayN || awayN.includes(t) || t.includes(awayN))) mapped.away = price;
+          }
+        }
+
+        if ((!mapped.home || !mapped.draw || !mapped.away) && outcomes.length >= 3) {
+          const first3 = outcomes.slice(0, 3).map((o) => ({ label: normalizeLabel(o.label), price: formatOdd(o.price) })).filter((o) => o.price);
+          if (first3.length === 3) {
+            const xIdx = first3.findIndex((o) => o.label === "x" || o.label.includes("draw") || o.label.includes("nul"));
+            if (xIdx !== -1) {
+              const other = [0, 1, 2].filter((i) => i !== xIdx);
+              mapped.draw = mapped.draw ?? first3[xIdx].price;
+              mapped.home = mapped.home ?? first3[other[0]].price;
+              mapped.away = mapped.away ?? first3[other[1]].price;
+            } else {
+              mapped.home = mapped.home ?? first3[0].price;
+              mapped.draw = mapped.draw ?? first3[1].price;
+              mapped.away = mapped.away ?? first3[2].price;
+            }
+          }
+        }
+        return mapped;
+      }
+
+      function has1x2Odds(game) {
+        const o = extract1x2Odds(game);
+        return Boolean(o.home && o.draw && o.away);
+      }
+
+      function normLite(s) {
+        return String(s ?? "")
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function formatPriceOrDash(x) {
+        const p = formatOdd(x);
+        return p == null ? "—" : p;
+      }
+
+      function marketCategoryKey(m) {
+        const k = normLite(m?.key);
+        const n = normLite(m?.name);
+        const s = `${k} ${n}`;
+        const isPopular =
+          s.includes("1x2") ||
+          s.includes("match result") ||
+          s.includes("resultat") ||
+          s.includes("double chance") ||
+          s.includes("draw no bet") ||
+          s.includes("btts") ||
+          s.includes("both teams") ||
+          s.includes("over") ||
+          s.includes("under") ||
+          s.includes("plus") ||
+          s.includes("moins");
+        if (isPopular) return "popular";
+        if (s.includes("but") || s.includes("goal") || s.includes("buts")) return "goals";
+        if (s.includes("handicap")) return "handicap";
+        if (s.includes("1ere") || s.includes("1er") || s.includes("1st half") || s.includes("first half") || s.includes("mi-temps") || s.includes("mi temps")) return "first_half";
+        if (s.includes("2eme") || s.includes("2nd half") || s.includes("second half")) return "second_half";
+        if (s.includes("cart") || s.includes("card") || s.includes("carton")) return "cards";
+        if (s.includes("corner") || s.includes("corners")) return "corners";
+        if (s.includes("combo")) return "combo";
+        if (s.includes("minute") || s.includes("min ") || s.includes("temps")) return "minute";
+        if (!k && !n) return "uncategorized";
+        return "other";
+      }
+
+      function groupMarkets(extra) {
+        const markets = Array.isArray(extra?.markets) ? extra.markets : [];
+        const groups = new Map();
+        for (const m of markets) {
+          const ck = marketCategoryKey(m);
+          if (!groups.has(ck)) groups.set(ck, []);
+          groups.get(ck).push(m);
+        }
+        return { markets, groups };
+      }
+
+      function categoryLabel(key) {
+        if (key === "popular") return "Populaire";
+        if (key === "goals") return "BUTS";
+        if (key === "handicap") return "HANDICAP";
+        if (key === "first_half") return "1ÈRE MOITIÉ";
+        if (key === "second_half") return "2ÈME MOITIE";
+        if (key === "cards") return "CARTES";
+        if (key === "corners") return "CORNERS";
+        if (key === "combo") return "COMBO MARKETS";
+        if (key === "minute") return "MINUTE";
+        if (key === "uncategorized") return "Hors catégorie";
+        return "AUTRES";
+      }
+
+      function renderMarketOutcomes(m) {
+        const outs = Array.isArray(m?.outcomes) ? m.outcomes : [];
+        if (!outs.length) return "";
+        const pills = outs
+          .map((o) => {
+            const lab = String(o?.label ?? "");
+            const h = o?.handicap == null ? "" : ` ${String(o.handicap)}`;
+            const p = formatPriceOrDash(o?.price);
+            return `<span class="pill" style="margin:0; padding:6px 10px;">${lab}${h}: <b>${p}</b></span>`;
+          })
+          .join("");
+        return `<div style="display:flex; gap: 8px; flex-wrap: wrap; justify-content:flex-end;">${pills}</div>`;
+      }
+
+      function renderAllMarketsAccordion(matchKey, extra) {
+        const { markets, groups } = groupMarkets(extra);
+        const total = markets.length;
+        const meta = extra?.cached === true ? "cached" : "fresh";
+
+        const order = [
+          "popular",
+          "goals",
+          "handicap",
+          "first_half",
+          "second_half",
+          "cards",
+          "corners",
+          "combo",
+          "minute",
+          "other",
+          "uncategorized",
+        ];
+
+        const catState = state.expandedCats[matchKey] ?? {};
+        const blocks = [];
+        for (const k of order) {
+          const arr = groups.get(k) ?? [];
+          if (!arr.length) continue;
+          const open = Boolean(catState[k]);
+          blocks.push(`
+            <div style="border-top: 1px solid rgba(255,255,255,.08);">
+              <button type="button" data-cat="${k}" data-match="${matchKey}" style="width:100%; display:flex; align-items:center; justify-content:space-between; gap: 10px; padding: 12px 8px; background: transparent; border: none; color: rgba(255,255,255,.92); font-weight: 800; cursor: pointer;">
+                <span>${categoryLabel(k)} (${arr.length})</span>
+                <span style="opacity:.75;">${open ? "▾" : "▸"}</span>
+              </button>
+              ${open ? `
+                <div style="padding: 6px 8px 12px 8px; display:flex; flex-direction: column; gap: 10px;">
+                  ${arr
+                    .map((m) => {
+                      const name = String(m?.name ?? m?.key ?? "Market");
+                      return `
+                        <div style="display:grid; grid-template-columns: 220px 1fr; gap: 12px; align-items:flex-start;">
+                          <div style="opacity:.9; font-weight: 700;">${name}</div>
+                          ${renderMarketOutcomes(m)}
+                        </div>
+                      `;
+                    })
+                    .join("")}
+                </div>
+              ` : ""}
+            </div>
+          `);
+        }
+
+        return `
+          <div style="display:flex; justify-content: space-between; gap: 10px; margin-bottom: 8px;">
+            <div style="font-weight:800;">All markets</div>
+            <div style="opacity:.7; font-size: 12px;">${meta} · ${total}</div>
+          </div>
+          <div>
+            ${blocks.join("")}
+          </div>
+        `;
+      }
+
+      function formatKickoff(startTime) {
+        const d = new Date(startTime);
+        if (!Number.isFinite(d.getTime())) return "--:--";
+        try {
+          return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(d);
+        } catch {
+          return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+        }
+      }
+
+      function formatCountdown(startTime) {
+        const d = new Date(startTime);
+        if (!Number.isFinite(d.getTime())) return null;
+        const ms = d.getTime() - Date.now();
+        if (ms <= 0) return state.mode === "live" ? "LIVE" : null;
+        const hours = Math.floor(ms / 36e5);
+        const days = Math.floor(hours / 24);
+        const remH = hours % 24;
+        if (days > 0) return `${days}d ${remH}h`;
+        return `${hours}h`;
+      }
+
+      function renderSidebar() {
+        const leagues = state.data?.leagues ?? [];
+        ui.leagueList.innerHTML = "";
+
+        if (!leagues.length) {
+          ui.leagueList.innerHTML = `<div class="pill">No leagues</div>`;
+          return;
+        }
+
+        for (const l of leagues) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          const active = String(l.id) === String(state.selectedLeagueId);
+          btn.className = `nav-item ${active ? "nav-item-active" : ""}`;
+          const games = Array.isArray(l.games) ? l.games : [];
+          const priced = games.reduce((acc, g) => acc + (has1x2Odds(g) ? 1 : 0), 0);
+          const count = state.onlyWithOdds ? priced : games.length;
+          btn.innerHTML = `
+            <span class="nav-left">
+              <span class="nav-dot"></span>
+              <span class="nav-name" title="${String(l.name ?? "")}">${String(l.name ?? "League")}</span>
+            </span>
+            <span class="nav-count">${count}</span>
+          `;
+          btn.addEventListener("click", () => {
+            state.selectedLeagueId = l.id;
+            render();
+          });
+          ui.leagueList.appendChild(btn);
+        }
+      }
+
+      function renderMain() {
+        const leagues = state.data?.leagues ?? [];
+        const selected = leagues.find((l) => String(l.id) === String(state.selectedLeagueId)) ?? leagues[0] ?? null;
+
+        if (selected && state.selectedLeagueId == null) state.selectedLeagueId = selected.id;
+
+        ui.leagueName.textContent = selected?.name ?? "No league";
+        ui.leagueDate.textContent = formatDateLong(new Date());
+        ui.dayLabel.textContent = formatDayShort(new Date());
+
+        const gamesAll = Array.isArray(selected?.games) ? selected.games : [];
+        const games = state.onlyWithOdds ? gamesAll.filter((g) => has1x2Odds(g)) : gamesAll;
+        ui.matchCount.textContent = `${games.length} Matchs`;
+
+        ui.matchList.innerHTML = "";
+        if (!games.length) {
+          ui.matchList.innerHTML = `<div class="pill">No games in this league</div>`;
+          return;
+        }
+
+        for (const g of games) {
+          const card = document.createElement("div");
+          card.className = "match-card";
+          const kickoff = formatKickoff(g.startTime);
+          const cd = formatCountdown(g.startTime);
+          const odds = extract1x2Odds(g);
+          const matchKey = String(g.externalId ?? g.id ?? "");
+          const expanded = Boolean(state.expanded[matchKey]);
+          const loading = Boolean(state.expandedLoading[matchKey]);
+          const err = state.expandedError[matchKey] ?? null;
+          const extra = state.expandedMarkets[matchKey] ?? null;
+          const totalMarkets = Array.isArray(extra?.markets) ? extra.markets.length : null;
+          const moreLabel = loading ? "..." : expanded ? "–" : totalMarkets != null ? `+${totalMarkets}` : "+";
+
+          card.innerHTML = `
+            <div class="match-left">
+              <div class="time-pill">${kickoff}</div>
+              ${cd ? `<div class="countdown">${cd}</div>` : ""}
+            </div>
+            <div class="match-mid">
+              <div class="league-tag">${state.mode === "live" ? "LIVE" : "UEFA"}</div>
+              <div class="teams">
+                <div class="team"><div class="team-icon">H</div><div class="team-name">${String(g.homeTeam ?? "Home")}</div></div>
+                <div class="team"><div class="team-icon">A</div><div class="team-name">${String(g.awayTeam ?? "Away")}</div></div>
+              </div>
+            </div>
+            <div class="odds">
+              <div class="odd ${odds.home ? "" : "odd-missing"}">${odds.home ?? "—"}</div>
+              <div class="odd ${odds.draw ? "" : "odd-missing"}">${odds.draw ?? "—"}</div>
+              <div class="odd ${odds.away ? "" : "odd-missing"}">${odds.away ?? "—"}</div>
+              <button type="button" class="odd" data-more="1" data-matchid="${matchKey}" style="background: linear-gradient(180deg, rgba(16,185,129,.22), rgba(16,185,129,.10)); border-color: rgba(16,185,129,.35); color: rgba(236,253,245,.95);">
+                ${moreLabel}
+              </button>
+            </div>
+            ${expanded ? `
+              <div class="pill" style="grid-column: 1 / -1; margin-top: 10px;">
+                ${loading ? "Loading markets..." : err ? String(err) : extra ? renderAllMarketsAccordion(matchKey, extra) : "No extra markets"}
+              </div>
+            ` : ""}
+          `;
+
+          const btn = card.querySelector("button[data-more='1']");
+          if (btn) {
+            btn.addEventListener("click", async () => {
+              if (!matchKey) return;
+              state.expanded[matchKey] = !state.expanded[matchKey];
+              state.expandedError[matchKey] = null;
+              if (!state.expandedCats[matchKey]) state.expandedCats[matchKey] = {};
+              render();
+
+              if (!state.expanded[matchKey]) return;
+              if (state.expandedMarkets[matchKey]) {
+                render();
+                return;
+              }
+              state.expandedLoading[matchKey] = true;
+              render();
+              try {
+                const path = `/api/prematch/match/${encodeURIComponent(matchKey)}/markets`;
+                const res = await fetch(path, { headers: { accept: "application/json" } });
+                if (!res.ok) {
+                  let body = null;
+                  try {
+                    body = await res.json();
+                  } catch {}
+                  if (res.status === 404) throw new Error("Match not in DB yet. Refresh odds / run discovery.");
+                  throw new Error(body?.error ? String(body.error) : `HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                state.expandedMarkets[matchKey] = data;
+              } catch (e) {
+                state.expandedError[matchKey] = String(e);
+              } finally {
+                state.expandedLoading[matchKey] = false;
+                render();
+              }
+            });
+          }
+
+          card.querySelectorAll("button[data-cat]").forEach((b) => {
+            b.addEventListener("click", () => {
+              const cat = b.getAttribute("data-cat");
+              if (!cat) return;
+              if (!state.expandedCats[matchKey]) state.expandedCats[matchKey] = {};
+              state.expandedCats[matchKey][cat] = !state.expandedCats[matchKey][cat];
+              render();
+            });
+          });
+
+          ui.matchList.appendChild(card);
+        }
+      }
+
+      function renderMode() {
+        if (state.mode === "prematch") {
+          ui.modePrematch.classList.add("chip-active");
+          ui.modeLive.classList.remove("chip-active");
+        } else {
+          ui.modeLive.classList.add("chip-active");
+          ui.modePrematch.classList.remove("chip-active");
+        }
+      }
+
+      function renderDebug() {
+        ui.debugPanel.classList.toggle("hidden", !state.debugOpen);
+      }
+
+      function render() {
+        renderMode();
+        renderSidebar();
+        renderMain();
+        renderDebug();
       }
 
       async function send(path) {
-        out.textContent = "Loading...";
-        openLink.href = path;
+        ui.out.textContent = "Loading...";
+        ui.open.href = path;
         try {
           const res = await fetch(path, { headers: { accept: "application/json" } });
           const text = await res.text();
@@ -89,23 +1170,77 @@
           try {
             pretty = JSON.stringify(JSON.parse(text), null, 2);
           } catch {}
-          out.textContent = `HTTP ${res.status}\n\n${pretty}`;
+          ui.out.textContent = `HTTP ${res.status}\n\n${pretty}`;
         } catch (e) {
-          out.textContent = String(e);
+          ui.out.textContent = String(e);
         }
       }
+
+      async function loadOdds() {
+        ui.matchList.innerHTML = `<div class="pill">Loading...</div>`;
+        const path = apiOddsPath();
+        ui.pathInput.value = path;
+        ui.open.href = path;
+        try {
+          const res = await fetch(path, { headers: { accept: "application/json" } });
+          if (!res.ok) {
+            const txt = await res.text();
+            state.data = { leagues: [] };
+            render();
+            ui.out.textContent = `HTTP ${res.status}\n\n${txt}`;
+            state.debugOpen = true;
+            renderDebug();
+            return;
+          }
+          const json = await res.json();
+          state.data = json;
+          const first = (state.data?.leagues ?? [])[0] ?? null;
+          if (first && state.selectedLeagueId == null) state.selectedLeagueId = first.id;
+          render();
+        } catch (e) {
+          state.data = { leagues: [] };
+          render();
+          ui.out.textContent = String(e);
+          state.debugOpen = true;
+          renderDebug();
+        }
+      }
+
+      ui.modePrematch.addEventListener("click", () => {
+        state.mode = "prematch";
+        state.selectedLeagueId = null;
+        loadOdds();
+      });
+
+      ui.modeLive.addEventListener("click", () => {
+        state.mode = "live";
+        state.selectedLeagueId = null;
+        loadOdds();
+      });
+
+      ui.refresh.addEventListener("click", () => loadOdds());
+
+      ui.onlyWithOdds.addEventListener("change", () => {
+        state.onlyWithOdds = Boolean(ui.onlyWithOdds.checked);
+        render();
+      });
+
+      ui.debugToggle.addEventListener("click", () => {
+        state.debugOpen = !state.debugOpen;
+        renderDebug();
+      });
+
+      ui.send.addEventListener("click", () => send(ui.pathInput.value));
 
       document.querySelectorAll("button[data-path]").forEach((b) => {
         b.addEventListener("click", () => {
           const p = b.getAttribute("data-path");
-          setPath(p);
+          ui.pathInput.value = p;
           send(p);
         });
       });
 
-      $("send").addEventListener("click", () => send(pathInput.value));
-
-      setPath(pathInput.value);
+      loadOdds();
     </script>
   </body>
 </html>

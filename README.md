@@ -26,8 +26,9 @@ The Worker expects these bindings:
 
 Configured in `wrangler.toml`:
 
-- `*/1 * * * *` (every minute): runs `runLive(env)`
-- `*/10 * * * *` (every 10 minutes): runs `runPrematch(env)`
+- `*/1 * * * *` (every minute): runs `runLive(env)` and `runPrematchDiscovery(env)`
+- `0 * * * *` (every hour): runs `runPrematchHourly(env)`
+- `5 */6 * * *` (every 6 hours): runs `runPrematchDiscovery(env)`
 
 ## Database schema
 
@@ -138,6 +139,43 @@ Query params:
 
 ---
 
+### `GET /api/test/stats`
+Returns high-level counters computed from Supabase.
+
+Query params:
+
+- `sportKey` (optional, default `football`)
+- `seenWithinMinutes` (optional, default `180`) filters prematch games by `games.last_seen_at`
+- `includeStale=1` (optional) disables the `last_seen_at` filter
+
+### `GET /api/test/run/prematch_discovery`
+Runs the prematch discovery crawl (queue-driven pagination).
+
+Query params:
+
+- `batch=<1..5>` (optional) number of catalog pages to process in this run
+
+### `GET /api/test/queue`
+Inspect or manipulate `scrape_queue`.
+
+Query params:
+
+- `action=peek` (optional) lists queue rows for a given task
+- `action=expedite` (optional) clears `not_before_at` + locks for a specific task row
+
+### `GET /api/test/matchlist_fetch_debug`
+Fetches raw match list HTML using both the "new" and "legacy" upstream URL patterns and returns response metadata + signals.
+
+Query params:
+
+- `sportId` (optional)
+- `betRangeFilter` (optional)
+- `page` (optional)
+- `dateDay` (optional) forwarded as `DateDay=...` to upstream for debugging
+
+### `GET /api/test/matchlist_parse_debug`
+Fetches + parses a match list page and returns parsing coverage signals.
+
 ## Read endpoints (from Supabase)
 
 These endpoints read from your Supabase tables and return a hierarchical response:
@@ -146,6 +184,16 @@ These endpoints read from your Supabase tables and return a hierarchical respons
 
 ### `GET /api/odds/prematch/:sportKey`
 Returns **non-live** games (`live=false`) for the sport key.
+
+By default this endpoint only returns games that are:
+
+- `start_time > now()` (upcoming)
+- seen recently (`games.last_seen_at` within `seenWithinMinutes`)
+
+Query params:
+
+- `seenWithinMinutes` (optional, default `180`)
+- `includeStale=1` (optional) disables the `last_seen_at` filter
 
 Example:
 
@@ -179,3 +227,9 @@ If your system Node.js is old, you can deploy with a temporary Node 20 + wrangle
 ```bash
 npx -y -p node@20 -p wrangler@3.95.0 -c "wrangler deploy"
 ```
+
+## Prematch discovery notes
+
+- Prematch discovery uses the upstream `/Sport/{sportId}` pagination pattern.
+- Requests include `DateDay=all_days` so deeper pages continue returning matches.
+- When a catalog page is empty, it is re-scheduled further in the future to avoid starving refresh of populated pages.
