@@ -62,8 +62,8 @@ export async function handleTestMatchlistRoutes(_request: Request, env: Env, url
     if (xhr) baseHeaders["x-requested-with"] = "XMLHttpRequest"
 
     const dateDayQs = dateDay ? `&DateDay=${encodeURIComponent(String(dateDay))}` : ""
-    const qsNew = `BetRangeFilter=${encodeURIComponent(String(betRangeFilter))}&Page_number=${encodeURIComponent(String(page))}&d=1${dateDayQs}`
-    const qsLegacy = `SportId=${encodeURIComponent(String(sportId))}&BetRangeFilter=${encodeURIComponent(String(betRangeFilter))}&Page_number=${encodeURIComponent(String(page))}&d=1${dateDayQs}`
+    const qsNew = `BetRangeFilter=${encodeURIComponent(String(betRangeFilter))}&Page_number=${encodeURIComponent(String(page))}&d=4${dateDayQs}`
+    const qsLegacy = `SportId=${encodeURIComponent(String(sportId))}&BetRangeFilter=${encodeURIComponent(String(betRangeFilter))}&Page_number=${encodeURIComponent(String(page))}&d=4${dateDayQs}`
     const targets: { kind: string; url: string }[] = []
     if (variant === "new" || variant === "both") {
       targets.push({ kind: "new_https", url: `https://tounesbet.com/Sport/${encodeURIComponent(String(sportId))}?${qsNew}` })

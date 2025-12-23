@@ -216,17 +216,33 @@ export async function getSportMatchListHTML(sportId: string | number, betRangeFi
     "x-requested-with": "XMLHttpRequest"
   }
 
-  const qsNew = `BetRangeFilter=${encodeURIComponent(String(betRangeFilter))}&Page_number=${encodeURIComponent(String(pageNumber))}&d=1&DateDay=all_days`
-  const urlsNew = [`https://tounesbet.com/Sport/${encodeURIComponent(String(sportId))}?${qsNew}`, `http://tounesbet.com/Sport/${encodeURIComponent(String(sportId))}?${qsNew}`]
+  const ds = ["4", "1"]
+  for (const d of ds) {
+    const qsNew = `BetRangeFilter=${encodeURIComponent(String(betRangeFilter))}&Page_number=${encodeURIComponent(String(pageNumber))}&d=${encodeURIComponent(d)}&DateDay=all_days`
+    const urlsNew = [`https://tounesbet.com/Sport/${encodeURIComponent(String(sportId))}?${qsNew}`, `http://tounesbet.com/Sport/${encodeURIComponent(String(sportId))}?${qsNew}`]
 
-  for (const u of urlsNew) {
+    for (const u of urlsNew) {
+      try {
+        const html = await getHTMLWithDdosBypass(u, headers)
+        if (/data-matchid=["']\d+["']/i.test(html) || /matchesTableBody/i.test(html)) return html
+      } catch {
+      }
+    }
+
+    const qsLegacy = `SportId=${encodeURIComponent(String(sportId))}&BetRangeFilter=${encodeURIComponent(String(betRangeFilter))}&Page_number=${encodeURIComponent(String(pageNumber))}&d=${encodeURIComponent(d)}&DateDay=all_days`
     try {
-      const html = await getHTMLWithDdosBypass(u, headers)
+      const html = await getHTMLWithDdosBypass(`https://tounesbet.com/Sport/matchList?${qsLegacy}`, headers)
+      if (/data-matchid=["']\d+["']/i.test(html) || /matchesTableBody/i.test(html)) return html
+    } catch {
+    }
+    try {
+      const html = await getHTMLWithDdosBypass(`http://tounesbet.com/Sport/matchList?${qsLegacy}`, headers)
       if (/data-matchid=["']\d+["']/i.test(html) || /matchesTableBody/i.test(html)) return html
     } catch {
     }
   }
 
+  // Last resort: attempt legacy https once more (throws if it fails)
   const qsLegacy = `SportId=${encodeURIComponent(String(sportId))}&BetRangeFilter=${encodeURIComponent(String(betRangeFilter))}&Page_number=${encodeURIComponent(String(pageNumber))}&d=1&DateDay=all_days`
   try {
     return await getHTMLWithDdosBypass(`https://tounesbet.com/Sport/matchList?${qsLegacy}`, headers)

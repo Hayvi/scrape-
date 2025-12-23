@@ -19,19 +19,36 @@ export async function serveOdds(env: Env, url: URL, sportKey: string, live: bool
   if (!Number.isFinite(seenWithinMinutes)) seenWithinMinutes = 180
   seenWithinMinutes = Math.max(0, Math.min(7 * 24 * 60, seenWithinMinutes))
   const seenCutoffIso = new Date(Date.now() - seenWithinMinutes * 60 * 1000).toISOString()
-  let gamesQ = db.from("games")
-    .select("id,external_id,league_id,home_team,away_team,start_time,live,last_seen_at")
-    .eq("source", source)
-    .in("league_id", leagueIds)
-    .eq("live", live)
-  if (!live && !includeStartedFlag) {
-    gamesQ = gamesQ.gt("start_time", new Date().toISOString())
+
+  const nowIso = new Date().toISOString()
+  const buildGamesQ = () => {
+    let q = db.from("games")
+      .select("id,external_id,league_id,home_team,away_team,start_time,live,last_seen_at")
+      .eq("source", source)
+      .in("league_id", leagueIds)
+      .eq("live", live)
+    if (!live && !includeStartedFlag) {
+      q = q.gt("start_time", nowIso)
+    }
+    if (!live && !includeStale && seenWithinMinutes > 0) {
+      q = q.gte("last_seen_at", seenCutoffIso)
+    }
+    return q
   }
-  if (!live && !includeStale && seenWithinMinutes > 0) {
-    gamesQ = gamesQ.gte("last_seen_at", seenCutoffIso)
+
+  const gamesData: { id: number; external_id: string; league_id: number; home_team: string; away_team: string; start_time: string; live: boolean; last_seen_at?: string }[] = []
+  const pageSize = 5000
+  let offset = 0
+  for (;;) {
+    const res = await buildGamesQ()
+      .order("id", { ascending: true })
+      .range(offset, offset + pageSize - 1)
+    if (res.error) throw new Error(`games select failed: ${JSON.stringify(res.error)}`)
+    const rows = (res.data ?? []) as any[]
+    gamesData.push(...rows)
+    if (rows.length < pageSize) break
+    offset += pageSize
   }
-  const games = await gamesQ
-  const gamesData = (games.data ?? []) as { id: number; external_id: string; league_id: number; home_team: string; away_team: string; start_time: string; live: boolean; last_seen_at?: string }[]
   const gameIds = gamesData.map((g) => g.id)
 
   const liveMetaByLsId = new Map<string, any>()

@@ -187,6 +187,18 @@ function parseMatchListTeams(rowHtml: string): { home: string; away: string } | 
     const away = decodeEntities(away1).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
     if (home && away) return { home, away }
   }
+
+  const home2 = rowHtml.match(/<(?:div|span)[^>]*class=["'][^"']*(competitor1-name|team1|home)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|span)>/i)?.[2]
+  const away2 = rowHtml.match(/<(?:div|span)[^>]*class=["'][^"']*(competitor2-name|team2|away)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|span)>/i)?.[2]
+  if (home2 && away2) {
+    const home = decodeEntities(home2).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+    const away = decodeEntities(away2).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+    if (home && away) return { home, away }
+  }
+
+  const text = decodeEntities(rowHtml.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim()
+  const m = text.match(/(.+?)\s+-\s+(.+?)(?:\s{2,}|$)/)
+  if (m) return { home: m[1].trim(), away: m[2].trim() }
   return null
 }
 
