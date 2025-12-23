@@ -29,6 +29,65 @@ export function normalizeTeamName(s) {
     .trim()
 }
 
+export function normalizeSearchKey(s) {
+  try {
+    return String(s ?? "")
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  } catch {
+    return String(s ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  }
+}
+
+export function splitLeagueName(full) {
+  const s = String(full ?? "").trim()
+  const parts = s.split("/")
+  if (parts.length >= 2) {
+    const country = parts[0].trim() || "Other"
+    const league = parts.slice(1).join("/").trim() || s
+    return { country, league }
+  }
+  return { country: s || "Other", league: s || "League" }
+}
+
+const COUNTRY_ALIAS = [
+  { canon: "emirats arabes unis", alias: ["emirates", "uae", "united arab emirates", "arab emirates"] },
+  { canon: "pays de galles", alias: ["wales"] },
+  { canon: "angleterre", alias: ["england"] },
+]
+
+export function leagueNameMatchesSearch(leagueName, search) {
+  const q = normalizeSearchKey(search)
+  if (!q) return true
+  const full = normalizeSearchKey(leagueName)
+  if (full.includes(q)) return true
+
+  const parts = splitLeagueName(leagueName)
+  const country = normalizeSearchKey(parts.country)
+  const league = normalizeSearchKey(parts.league)
+  if (country.includes(q) || league.includes(q)) return true
+
+  for (const rule of COUNTRY_ALIAS) {
+    const canon = normalizeSearchKey(rule.canon)
+    if (!canon) continue
+    if (!country.includes(canon)) continue
+    for (const a of rule.alias) {
+      const ak = normalizeSearchKey(a)
+      if (!ak) continue
+      if (ak === q || ak.includes(q) || q.includes(ak)) return true
+    }
+  }
+  return false
+}
+
 export function pick1x2Market(markets) {
   const arr = Array.isArray(markets) ? markets : []
   const byKey = arr.find((m) => normalizeLabel(m.key) === "match" || normalizeLabel(m.key) === "1x2")

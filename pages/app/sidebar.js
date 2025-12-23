@@ -1,4 +1,4 @@
-import { has1x2Odds } from "./utils.js"
+import { has1x2Odds, leagueNameMatchesSearch, normalizeSearchKey, splitLeagueName } from "./utils.js"
 
 export function renderSidebar(ui, state, render) {
   const allLeagues = state.data?.leagues ?? []
@@ -9,35 +9,23 @@ export function renderSidebar(ui, state, render) {
     return
   }
 
-  const search = String(state.leagueSearch ?? "").trim().toLowerCase()
+  const search = String(state.leagueSearch ?? "").trim()
+  const searchKey = normalizeSearchKey(search)
 
   function splitName(full) {
-    const s = String(full ?? "").trim()
-    const parts = s.split("/")
-    if (parts.length >= 2) {
-      const country = parts[0].trim() || "Other"
-      const league = parts.slice(1).join("/").trim() || s
-      return { country, league }
-    }
-    return { country: s || "Other", league: s || "League" }
+    return splitLeagueName(full)
   }
 
   function leagueMatchesSearch(league) {
-    if (!search) return true
+    if (!searchKey) return true
     const rawName = String(league?.name ?? "")
-    const name = rawName.toLowerCase()
-    if (name.includes(search)) return true
-
-    const parts = splitName(rawName)
-    const countryLc = String(parts.country ?? "").toLowerCase()
-    const leagueLc = String(parts.league ?? "").toLowerCase()
-    if (countryLc.includes(search) || leagueLc.includes(search)) return true
+    if (leagueNameMatchesSearch(rawName, search)) return true
 
     const games = Array.isArray(league?.games) ? league.games : []
     for (const g of games) {
-      const h = String(g.homeTeam ?? "").toLowerCase()
-      const a = String(g.awayTeam ?? "").toLowerCase()
-      if (h.includes(search) || a.includes(search)) return true
+      const h = normalizeSearchKey(g.homeTeam)
+      const a = normalizeSearchKey(g.awayTeam)
+      if (h.includes(searchKey) || a.includes(searchKey)) return true
     }
     return false
   }
@@ -57,7 +45,7 @@ export function renderSidebar(ui, state, render) {
     return "🏳️"
   }
 
-  const leagues = search ? allLeagues.filter(leagueMatchesSearch) : allLeagues
+  const leagues = searchKey ? allLeagues.filter(leagueMatchesSearch) : allLeagues
 
   if (!leagues.length) {
     ui.leagueList.innerHTML = `<div class="pill">No competitions or games match "${search}"</div>`

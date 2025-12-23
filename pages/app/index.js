@@ -6,6 +6,8 @@ import {
   formatDateLong,
   formatDayShort,
   formatKickoff,
+  leagueNameMatchesSearch,
+  normalizeSearchKey,
 } from "./utils.js"
 import { renderAllMarketsAccordion } from "./markets.js"
 import { renderSidebar } from "./sidebar.js"
@@ -34,6 +36,8 @@ function writeSetting(key, value) {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
   } catch {}
 }
+
+if (typeof settings.leagueSearch === "string") state.leagueSearch = settings.leagueSearch
 
 function initSettingCheckbox(el, key, defaultValue) {
   if (!el) return
@@ -91,12 +95,14 @@ function renderMain() {
   ui.dayLabel.textContent = formatDayShort(new Date())
 
   const gamesAll = Array.isArray(selected?.games) ? selected.games : []
-  const search = String(state.leagueSearch ?? "").trim().toLowerCase()
-  const gamesFilteredBySearch = search
+  const search = String(state.leagueSearch ?? "").trim()
+  const searchKey = normalizeSearchKey(search)
+  const shouldFilterGamesBySearch = Boolean(searchKey) && !leagueNameMatchesSearch(String(selected?.name ?? ""), search)
+  const gamesFilteredBySearch = shouldFilterGamesBySearch
     ? gamesAll.filter((g) => {
-        const h = String(g.homeTeam ?? "").toLowerCase()
-        const a = String(g.awayTeam ?? "").toLowerCase()
-        return h.includes(search) || a.includes(search)
+        const h = normalizeSearchKey(g.homeTeam)
+        const a = normalizeSearchKey(g.awayTeam)
+        return h.includes(searchKey) || a.includes(searchKey)
       })
     : gamesAll
   const games = state.onlyWithOdds ? gamesFilteredBySearch.filter((g) => {
@@ -346,6 +352,23 @@ if (ui.leagueSearch) {
   ui.leagueSearch.value = state.leagueSearch || ""
   ui.leagueSearch.addEventListener("input", () => {
     state.leagueSearch = String(ui.leagueSearch.value || "")
+    writeSetting("leagueSearch", state.leagueSearch)
+
+    const q = normalizeSearchKey(state.leagueSearch)
+    if (q && Array.isArray(state.data?.leagues)) {
+      const match = state.data.leagues.find((l) => {
+        if (leagueNameMatchesSearch(String(l?.name ?? ""), state.leagueSearch)) return true
+        const games = Array.isArray(l?.games) ? l.games : []
+        for (const g of games) {
+          const h = normalizeSearchKey(g.homeTeam)
+          const a = normalizeSearchKey(g.awayTeam)
+          if (h.includes(q) || a.includes(q)) return true
+        }
+        return false
+      })
+      state.selectedLeagueId = match ? match.id : null
+    }
+
     render()
   })
 }
