@@ -5,15 +5,16 @@ import { runLive, runPrematchDiscovery, runPrematchHourly } from "./service"
 export async function scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
   if (event.cron === "*/1 * * * *") {
     ctx.waitUntil(Promise.allSettled([
-      runLive(env),
-      runPrematchDiscovery(env as any, { batch: 4 }),
-      runPrematchHourly(env as any, 5)
+      runPrematchDiscovery(env as any, { batch: 1 })
     ]))
   } else if (event.cron === "*/5 * * * *") {
-    ctx.waitUntil(runPrematchHourly(env as any, 8))
+    ctx.waitUntil(Promise.allSettled([
+      runLive(env),
+      runPrematchHourly(env as any, 4)
+    ]))
   } else if (event.cron === "0 * * * *") {
     ctx.waitUntil(runPrematchHourly(env as any))
   } else if (event.cron === "5 */6 * * *") {
-    ctx.waitUntil(runPrematchDiscovery(env as any, { batch: 4 }))
+    ctx.waitUntil(runPrematchDiscovery(env as any, { batch: 2 }))
   }
 }

@@ -91,9 +91,16 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
 
   const enqueue1x2: { matchId: string; startTime: string | null }[] = []
   const enqueueNextPages: string[] = []
-  const successIds: number[] = []
-  const emptySuccessIds: number[] = []
-  const failures: { id: number; attempts: number; error: string }[] = []
+  const nowIso = () => new Date().toISOString()
+
+  function looksBlocked(html: string): boolean {
+    const h = String(html || "")
+    if (!h) return true
+    if (/Actuellement,\s+il\s+n\x27y\s+a\s+pas\s+de\s+correspondances\s+actives\./i.test(h)) return false
+    if (/cloudflare|checking your browser|attention required|cf-ray|cdn-cgi/i.test(h)) return true
+    if (/document\.cookie\s*=\s*"[^";=]+=[^;]+\s*;\s*path=\//i.test(h)) return true
+    return false
+  }
 
   function hasComplete1x2(game: any) {
     const markets = Array.isArray(game?.markets) ? game.markets : []
@@ -118,6 +125,8 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
 
     try {
       const html = await getSportMatchListHTML(sId, br, page)
+      const hasMatchIds = /data-matchid=["']\d+["']/i.test(html) || /matchesTableBody/i.test(html)
+      if (!hasMatchIds && looksBlocked(html)) throw new Error("blocked matchlist html")
       const parsed = parsePrematchSportMatchList(html, sId)
       const res = await persistParsed(env, parsed)
 
@@ -144,11 +153,26 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
         }
       }
 
-      successIds.push(id)
-      if (!games.length) emptySuccessIds.push(id)
+      await updateScrapeTask(db, id, {
+        status: "pending",
+        not_before_at: games.length ? tenMinutesLater() : sixHoursLater(),
+        locked_at: null,
+        lock_owner: null,
+        last_error: null,
+        last_success_at: nowIso()
+      })
     } catch (e) {
       results.fail++
-      failures.push({ id, attempts, error: String(e) })
+      try {
+        await updateScrapeTask(db, id, {
+          status: "pending",
+          not_before_at: backoffLater(attempts),
+          locked_at: null,
+          lock_owner: null,
+          last_error: String(e)
+        })
+      } catch {
+      }
     }
   }
 
@@ -186,57 +210,6 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
       priority: 20
     })))
     results.nextPagesEnqueued += uniq.length
-  }
-
-  if (successIds.length) {
-    const next = tenMinutesLater()
-    const nextEmpty = sixHoursLater()
-    const now = new Date().toISOString()
-
-    const normalIds = successIds.filter(x => !emptySuccessIds.includes(x))
-
-    if (normalIds.length) {
-      const upd = await db
-        .from("scrape_queue")
-        .update({
-          status: "pending",
-          not_before_at: next,
-          locked_at: null,
-          lock_owner: null,
-          last_error: null,
-          last_success_at: now
-        })
-        .in("id", normalIds)
-      if (upd.error) throw new Error(`updateScrapeTask batch failed: ${JSON.stringify(upd.error)}`)
-    }
-
-    if (emptySuccessIds.length) {
-      const updEmpty = await db
-        .from("scrape_queue")
-        .update({
-          status: "pending",
-          not_before_at: nextEmpty,
-          locked_at: null,
-          lock_owner: null,
-          last_error: null,
-          last_success_at: now
-        })
-        .in("id", emptySuccessIds)
-      if (updEmpty.error) throw new Error(`updateScrapeTask empty batch failed: ${JSON.stringify(updEmpty.error)}`)
-    }
-  }
-
-  for (const f of failures) {
-    try {
-      await updateScrapeTask(db, f.id, {
-        status: "pending",
-        not_before_at: backoffLater(f.attempts),
-        locked_at: null,
-        lock_owner: null,
-        last_error: f.error
-      })
-    } catch {
-    }
   }
 
   return results
