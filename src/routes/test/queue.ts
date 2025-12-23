@@ -10,13 +10,14 @@ export async function handleTestQueueRoute(_request: Request, env: Env, url: URL
   const source = url.searchParams.get("source") ?? "tounesbet"
   const task = url.searchParams.get("task") ?? "prematch_1x2"
   const externalId = url.searchParams.get("externalId") ?? ""
+  const priority = Math.max(0, Math.min(100, Number(url.searchParams.get("priority") ?? "1") || 1))
   const limit = Math.max(0, Math.min(50, Number(url.searchParams.get("limit") ?? "5") || 5))
   const lockOwner = url.searchParams.get("lockOwner") ?? "debug"
   try {
     if (action === "enqueue") {
       if (!externalId) return json({ error: "missing externalId" }, 400)
-      await upsertScrapeQueue(db, [{ source, task, external_id: externalId, status: "pending", priority: 1 }])
-      return json({ ok: true, action, source, task, externalId })
+      await upsertScrapeQueue(db, [{ source, task, external_id: externalId, status: "pending", priority }])
+      return json({ ok: true, action, source, task, externalId, priority })
     }
     if (action === "expedite") {
       const upd = await db

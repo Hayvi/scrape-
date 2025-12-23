@@ -89,11 +89,22 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
   const sixHoursLater = () => new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString()
   const backoffLater = (attempts: number) => new Date(Date.now() + Math.min(60, 5 * Math.max(1, attempts)) * 60 * 1000).toISOString()
 
-  const enqueue1x2Ids: string[] = []
+  const enqueue1x2: { matchId: string; startTime: string | null }[] = []
   const enqueueNextPages: string[] = []
   const successIds: number[] = []
   const emptySuccessIds: number[] = []
   const failures: { id: number; attempts: number; error: string }[] = []
+
+  function hasComplete1x2(game: any) {
+    const markets = Array.isArray(game?.markets) ? game.markets : []
+    const m = markets.find((x: any) => String(x?.key ?? "").toLowerCase() === "1x2")
+    const outs = Array.isArray(m?.outcomes) ? m.outcomes : []
+    if (outs.length < 3) return false
+    const labels = new Set(outs.map((o: any) => String(o?.label ?? "").toUpperCase().trim()))
+    if (!labels.has("1") || !labels.has("X") || !labels.has("2")) return false
+    const pricesOk = outs.filter((o: any) => Number.isFinite(Number(o?.price)) && Number(o?.price) > 0).length >= 3
+    return pricesOk
+  }
 
   for (const t of tasks) {
     const id = Number(t.id)
@@ -118,7 +129,9 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
       const nextEmptyStreak = games.length ? 0 : (emptyStreak + 1)
 
       if (games.length) {
-        for (const g of games) enqueue1x2Ids.push(String(g.external_id))
+        for (const g of games) {
+          if (!hasComplete1x2(g)) enqueue1x2.push({ matchId: String(g.external_id), startTime: g.start_time ? String(g.start_time) : null })
+        }
       }
 
       if (!games.length && nextEmptyStreak >= EMPTY_STREAK_LIMIT) {
@@ -139,15 +152,27 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
     }
   }
 
-  if (enqueue1x2Ids.length) {
-    const uniq = Array.from(new Set(enqueue1x2Ids))
-    await upsertScrapeQueue(db, uniq.map(external_id => ({
-      source: SOURCE,
-      task: "prematch_1x2",
-      external_id,
-      status: "pending",
-      priority: 10
-    })))
+  if (enqueue1x2.length) {
+    const byId = new Map<string, { matchId: string; startTime: string | null }>()
+    for (const e of enqueue1x2) {
+      if (!e.matchId) continue
+      if (!byId.has(e.matchId)) byId.set(e.matchId, e)
+    }
+    const uniq = Array.from(byId.values())
+
+    const nowMs = Date.now()
+    const rows = uniq.map(({ matchId, startTime }) => {
+      let priority = 20
+      const ms = startTime ? Date.parse(startTime) : NaN
+      if (Number.isFinite(ms)) {
+        const diffMins = (ms - nowMs) / 60000
+        if (diffMins <= 24 * 60) priority = 5
+        else if (diffMins <= 3 * 24 * 60) priority = 10
+      }
+      return { source: SOURCE, task: "prematch_1x2", external_id: matchId, status: "pending", priority }
+    })
+
+    await upsertScrapeQueue(db, rows)
     results.enqueued1x2 += uniq.length
   }
 

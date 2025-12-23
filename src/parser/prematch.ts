@@ -1,5 +1,5 @@
 import { ParsedLeague, ParsedSport } from "../domain"
-import { decodeEntities, parseDecimal, slugify } from "./shared"
+import { decodeEntities, extractAttr, parseDecimal, slugify } from "./shared"
 
 function extractSportsFromNav(html: string): ParsedSport[] {
   const navMatch = html.match(/<nav[^>]*id=["']main_nav["'][^>]*>[\s\S]*?<\/nav>/i)
@@ -202,6 +202,42 @@ function parseMatchListStartIso(dateDdMmYyyy: string | null, rowHtml: string): s
   return new Date().toISOString()
 }
 
+function parseMatchList1x2Market(rowHtml: string, matchId: string) {
+  const cell = rowHtml.match(/<td[^>]*class=["'][^"']*betColumn[^"']*main-market-no_1[^"']*["'][^>]*>([\s\S]*?)<\/td>/i)?.[1] ?? null
+  if (!cell) return null
+
+  const odds: { id: string; price: number }[] = []
+  const tagRe = /<(div|span)[^>]*data-matchoddid=["'](\d+)["'][^>]*>/gi
+  let tm: RegExpExecArray | null
+  while ((tm = tagRe.exec(cell)) !== null) {
+    const openTag = tm[0]
+    if (!/class=["'][^"']*(match-odd|match_odd)[^"']*["']/i.test(openTag)) continue
+    const id = tm[2]
+    const raw = extractAttr(openTag, "data-oddvaluedecimal")
+    if (!raw) continue
+    const price = parseDecimal(raw)
+    if (!Number.isFinite(price) || price <= 0) continue
+    odds.push({ id, price })
+    if (odds.length >= 3) break
+  }
+
+  if (odds.length < 3) return null
+  const o1 = odds[0]
+  const ox = odds[1]
+  const o2 = odds[2]
+
+  return {
+    key: "1x2",
+    name: "1X2",
+    external_id: `${matchId}_1x2`,
+    outcomes: [
+      { label: "1", price: o1.price, handicap: null, external_id: `${matchId}_${o1.id}` },
+      { label: "X", price: ox.price, handicap: null, external_id: `${matchId}_${ox.id}` },
+      { label: "2", price: o2.price, handicap: null, external_id: `${matchId}_${o2.id}` },
+    ]
+  }
+}
+
 function extractMatchListSections(html: string) {
   const scope = html
   const sections: { tournamentId: string | null; name: string; rows: { html: string; date: string | null }[] }[] = []
@@ -255,13 +291,14 @@ export function parsePrematchSportMatchList(html: string, sportId: string): Pars
       if (!matchId) continue
       const teams = parseMatchListTeams(row)
       if (!teams) continue
+      const oneX2 = parseMatchList1x2Market(row, matchId)
       games.push({
         external_id: matchId,
         home_team: teams.home,
         away_team: teams.away,
         start_time: parseMatchListStartIso(entry.date, row),
         live: false,
-        markets: []
+        markets: oneX2 ? [oneX2] : []
       })
     }
     if (!games.length) continue

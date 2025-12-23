@@ -9,7 +9,7 @@ const SOURCE = "tounesbet"
 export async function runPrematchHourly(env: WorkerEnv, batch = 12) {
   const db = getClient(env)
   const lockOwner = `worker:${Math.random().toString(16).slice(2)}`
-  const safeBatch = Math.max(1, Math.min(15, Number(batch) || 12))
+  const safeBatch = Math.max(1, Math.min(8, Number(batch) || 12))
   const tasks = await claimScrapeTasks(db, SOURCE, "prematch_1x2", safeBatch, lockOwner)
   const results: { ok: number; fail: number } = { ok: 0, fail: 0 }
   const oneHourLater = () => new Date(Date.now() + 60 * 60 * 1000).toISOString()

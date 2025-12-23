@@ -52,6 +52,7 @@ export async function handleTestMatchlistRoutes(_request: Request, env: Env, url
     const variant = (url.searchParams.get("variant") ?? "both").toLowerCase()
     const xhr = url.searchParams.get("xhr") !== "0"
     const dateDay = url.searchParams.get("dateDay")
+    const matchId = url.searchParams.get("matchId")
 
     const baseHeaders: Record<string, string> = {
       accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -85,7 +86,25 @@ export async function handleTestMatchlistRoutes(_request: Request, env: Env, url
           ddosGate: /document\.cookie\s*=\s*"[^";=]+=[^;]+\s*;\s*path=\//i.test(text),
           cloudflare: /cloudflare|attention required|cf-ray|checking your browser/i.test(text)
         }
-        results.push({ kind: t.kind, target: t.url, status: res.status, finalUrl: res.finalUrl, contentType: res.contentType, length: text.length, signals, snippet: text.slice(0, 1200).replace(/\s+/g, " ").trim() })
+        let matchRowSnippet: string | null = null
+        let matchRowHtml: string | null = null
+        if (matchId) {
+          const re = new RegExp(`data-matchid=["']${String(matchId).replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}["']`)
+          const m = re.exec(text)
+          const idx = m ? m.index : -1
+          if (idx !== -1) {
+            const start = Math.max(0, idx - 1600)
+            const end = Math.min(text.length, idx + 2400)
+            matchRowSnippet = text.slice(start, end).replace(/\s+/g, " ").trim()
+
+            const trStart = text.lastIndexOf("<tr", idx)
+            const trEnd = text.indexOf("</tr>", idx)
+            if (trStart !== -1 && trEnd !== -1 && trEnd > trStart) {
+              matchRowHtml = text.slice(trStart, trEnd + 5).replace(/\s+/g, " ").trim()
+            }
+          }
+        }
+        results.push({ kind: t.kind, target: t.url, status: res.status, finalUrl: res.finalUrl, contentType: res.contentType, length: text.length, signals, snippet: text.slice(0, 1200).replace(/\s+/g, " ").trim(), matchRowSnippet, matchRowHtml })
       } catch (e) {
         results.push({ kind: t.kind, target: t.url, error: String(e) })
       }
