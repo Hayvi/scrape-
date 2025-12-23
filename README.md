@@ -54,6 +54,14 @@ Tables used:
 
 Base URL (example): `https://<your-worker>.workers.dev`
 
+### 1X2 odds reliability
+
+- Canonical 1X2 market external_id: `${matchId}_1x2` (persisted during prematch discovery from the matchlist HTML).
+- `/api/odds/prematch/<sport>` fetches only this canonical market per game and returns exactly 3 outcomes labeled `1`, `X`, `2`.
+- Outcomes are fetched via nested select in the same query to avoid truncation or bigint/string ID mismatches.
+- Include stale/seen filters: `?includeStale=1&seenWithinMinutes=720` are useful when checking coverage.
+- Quick check for a specific match: `/api/odds/prematch/football?includeStale=1&seenWithinMinutes=720` and find `externalId` = matchId; the first market should have 3 outcomes.
+
 ## Frontend tester (Cloudflare Pages)
 
 This repo also includes a tiny Cloudflare Pages site to test the Worker endpoints from the browser.
