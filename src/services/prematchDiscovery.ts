@@ -29,7 +29,7 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
 
   const EMPTY_STREAK_LIMIT = 8
 
-  const batch = Math.max(1, Math.min(20, Number(opts?.batch ?? 3) || 3))
+  const batch = Math.max(1, Math.min(4, Number(opts?.batch ?? 3) || 3))
   let tasks = await claimScrapeTasks(db, SOURCE, "prematch_catalog_page", batch, lockOwner)
   if (!tasks.length) {
     const nowIso = new Date().toISOString()

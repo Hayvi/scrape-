@@ -15,7 +15,7 @@ export async function handleTestRunRoute(_request: Request, env: Env, url: URL, 
 
   if (p === "/api/test/run/prematch_discovery") {
     try {
-      const batch = Math.max(1, Math.min(8, Number(url.searchParams.get("batch") ?? "3") || 3))
+      const batch = Math.max(1, Math.min(4, Number(url.searchParams.get("batch") ?? "3") || 3))
       const res = await runPrematchDiscovery(env as any, { batch })
       return json({ ok: true, batch, res })
     } catch (e) {

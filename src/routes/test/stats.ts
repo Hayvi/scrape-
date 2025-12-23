@@ -19,7 +19,10 @@ export async function handleTestStatsRoute(_request: Request, env: Env, url: URL
 
     const nowIso = new Date().toISOString()
     const includeStale = url.searchParams.get("includeStale") === "1"
-    const seenWithinMinutes = Math.max(0, Math.min(7 * 24 * 60, Number(url.searchParams.get("seenWithinMinutes") ?? "180") || 180))
+    const seenRaw = url.searchParams.get("seenWithinMinutes")
+    let seenWithinMinutes = Number(seenRaw ?? "180")
+    if (!Number.isFinite(seenWithinMinutes)) seenWithinMinutes = 180
+    seenWithinMinutes = Math.max(0, Math.min(7 * 24 * 60, seenWithinMinutes))
     const seenCutoffIso = new Date(Date.now() - seenWithinMinutes * 60 * 1000).toISOString()
 
     let totalGamesQ = db

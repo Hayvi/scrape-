@@ -14,7 +14,10 @@ export async function serveOdds(env: Env, url: URL, sportKey: string, live: bool
   if (!leagueIds.length) return json({ sport: { key: s.data.key, name: s.data.name }, leagues: [] })
   const includeStartedFlag = url.searchParams.get("includeStarted") === "1"
   const includeStale = url.searchParams.get("includeStale") === "1"
-  const seenWithinMinutes = Math.max(0, Math.min(7 * 24 * 60, Number(url.searchParams.get("seenWithinMinutes") ?? "180") || 180))
+  const seenRaw = url.searchParams.get("seenWithinMinutes")
+  let seenWithinMinutes = Number(seenRaw ?? "180")
+  if (!Number.isFinite(seenWithinMinutes)) seenWithinMinutes = 180
+  seenWithinMinutes = Math.max(0, Math.min(7 * 24 * 60, seenWithinMinutes))
   const seenCutoffIso = new Date(Date.now() - seenWithinMinutes * 60 * 1000).toISOString()
   let gamesQ = db.from("games")
     .select("id,external_id,league_id,home_team,away_team,start_time,live,last_seen_at")
