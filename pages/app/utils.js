@@ -3,6 +3,8 @@ export function setText(el, v) {
   el.textContent = v == null ? "—" : String(v)
 }
 
+const TUNIS_TZ = "Africa/Tunis"
+
 export function safeNumber(x) {
   const n = typeof x === "number" ? x : Number(x)
   return Number.isFinite(n) ? n : null
@@ -149,7 +151,7 @@ export function has1x2Odds(game) {
 
 export function formatDateLong(d) {
   try {
-    return new Intl.DateTimeFormat(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" }).format(d)
+    return new Intl.DateTimeFormat(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: TUNIS_TZ }).format(d)
   } catch {
     return d.toISOString()
   }
@@ -157,7 +159,7 @@ export function formatDateLong(d) {
 
 export function formatDayShort(d) {
   try {
-    return new Intl.DateTimeFormat(undefined, { weekday: "long", day: "2-digit", month: "long" }).format(d)
+    return new Intl.DateTimeFormat(undefined, { weekday: "long", day: "2-digit", month: "long", timeZone: TUNIS_TZ }).format(d)
   } catch {
     return d.toISOString()
   }
@@ -167,7 +169,7 @@ export function formatKickoff(startTime) {
   const d = new Date(startTime)
   if (!Number.isFinite(d.getTime())) return "--:--"
   try {
-    return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit" }).format(d)
+    return new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", timeZone: TUNIS_TZ }).format(d)
   } catch {
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
   }

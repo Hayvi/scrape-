@@ -1,6 +1,52 @@
 import { ParsedLeague, ParsedSport } from "../domain"
 import { decodeEntities, extractAttr, parseDecimal, slugify } from "./shared"
 
+const TUNIS_TZ = "Africa/Tunis"
+
+function tzOffsetMs(timeZone: string, utcMs: number): number {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  })
+  const parts = dtf.formatToParts(new Date(utcMs))
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? "0")
+  const y = get("year")
+  const m = get("month")
+  const d = get("day")
+  const hh = get("hour")
+  const mm = get("minute")
+  const ss = get("second")
+  const asUtc = Date.UTC(y, m - 1, d, hh, mm, ss)
+  return asUtc - utcMs
+}
+
+function tunisLocalToIso(dateDdMmYyyy: string, timeHhMmSs: string): string {
+  const [dd, mm, yyyy] = String(dateDdMmYyyy).split("/")
+  if (!dd || !mm || !yyyy) return new Date().toISOString()
+  const t = String(timeHhMmSs)
+  const base = t.length === 5 ? `${t}:00` : t
+  const m = base.match(/^(\d{2}):(\d{2})(?::(\d{2}))?$/)
+  if (!m) return new Date().toISOString()
+  const hh = Number(m[1])
+  const mi = Number(m[2])
+  const ss = Number(m[3] ?? "0")
+  const y = Number(yyyy)
+  const mo = Number(mm)
+  const da = Number(dd)
+  if (![hh, mi, ss, y, mo, da].every(Number.isFinite)) return new Date().toISOString()
+
+  const localAsUtc = Date.UTC(y, mo - 1, da, hh, mi, ss)
+  const utc1 = localAsUtc - tzOffsetMs(TUNIS_TZ, localAsUtc)
+  const utc2 = localAsUtc - tzOffsetMs(TUNIS_TZ, utc1)
+  return new Date(utc2).toISOString()
+}
+
 function extractSportsFromNav(html: string): ParsedSport[] {
   const navMatch = html.match(/<nav[^>]*id=["']main_nav["'][^>]*>[\s\S]*?<\/nav>/i)
   const scope = navMatch ? navMatch[0] : html
@@ -45,8 +91,7 @@ function extractPopularMatches(html: string) {
     const timeM = b.match(/>(\d{2}:\d{2}:\d{2})</)
     let startIso = new Date().toISOString()
     if (dateM && timeM) {
-      const [d, mth, y] = dateM[1].split("/")
-      startIso = new Date(`${y}-${mth}-${d}T${timeM[1]}Z`).toISOString()
+      startIso = tunisLocalToIso(dateM[1], timeM[1])
     }
 
     const outRe = /class=["']match-odd\s+quoteValue["'][^>]*data-matchoddid=["'](\d+)["'][^>]*data-oddvaluedecimal='([^']+)'[\s\S]*?<span[^>]*>([12X])<\/span>/gi
@@ -65,9 +110,7 @@ function parseNextMatchesStartTime(rowHtml: string): string {
   const dateM = rowHtml.match(/>(\d{2}\/\d{2}\/\d{4})</)
   const timeM = rowHtml.match(/>(\d{2}:\d{2}:\d{2})</) ?? rowHtml.match(/>(\d{2}:\d{2})</)
   if (dateM && timeM) {
-    const [d, mth, y] = dateM[1].split("/")
-    const t = timeM[1].length === 5 ? `${timeM[1]}:00` : timeM[1]
-    return new Date(`${y}-${mth}-${d}T${t}Z`).toISOString()
+    return tunisLocalToIso(dateM[1], timeM[1])
   }
   return new Date().toISOString()
 }
@@ -207,9 +250,7 @@ function parseMatchListStartIso(dateDdMmYyyy: string | null, rowHtml: string): s
   const usedDate = dateDdMmYyyy ?? rowDate
   const timeM = rowHtml.match(/>\s*(\d{2}:\d{2})(?::\d{2})?\s*</)
   if (usedDate && timeM) {
-    const [d, mth, y] = usedDate.split("/")
-    const t = timeM[1].length === 5 ? `${timeM[1]}:00` : timeM[1]
-    return new Date(`${y}-${mth}-${d}T${t}Z`).toISOString()
+    return tunisLocalToIso(usedDate, timeM[1])
   }
   return new Date().toISOString()
 }
