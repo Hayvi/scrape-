@@ -91,10 +91,18 @@ function renderMain() {
   ui.dayLabel.textContent = formatDayShort(new Date())
 
   const gamesAll = Array.isArray(selected?.games) ? selected.games : []
-  const games = state.onlyWithOdds ? gamesAll.filter((g) => {
+  const search = String(state.leagueSearch ?? "").trim().toLowerCase()
+  const gamesFilteredBySearch = search
+    ? gamesAll.filter((g) => {
+        const h = String(g.homeTeam ?? "").toLowerCase()
+        const a = String(g.awayTeam ?? "").toLowerCase()
+        return h.includes(search) || a.includes(search)
+      })
+    : gamesAll
+  const games = state.onlyWithOdds ? gamesFilteredBySearch.filter((g) => {
     const o = extract1x2Odds(g)
     return Boolean(o.home && o.draw && o.away)
-  }) : gamesAll
+  }) : gamesFilteredBySearch
   ui.matchCount.textContent = `${games.length} Matchs`
 
   ui.matchList.innerHTML = ""
@@ -333,3 +341,11 @@ if (ui.oddsSeenMins) {
 loadOdds()
 stats.loadStats()
 stats.syncStatsInterval()
+
+if (ui.leagueSearch) {
+  ui.leagueSearch.value = state.leagueSearch || ""
+  ui.leagueSearch.addEventListener("input", () => {
+    state.leagueSearch = String(ui.leagueSearch.value || "")
+    render()
+  })
+}

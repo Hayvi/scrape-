@@ -1,13 +1,15 @@
 import { has1x2Odds } from "./utils.js"
 
 export function renderSidebar(ui, state, render) {
-  const leagues = state.data?.leagues ?? []
+  const allLeagues = state.data?.leagues ?? []
   ui.leagueList.innerHTML = ""
 
-  if (!leagues.length) {
+  if (!allLeagues.length) {
     ui.leagueList.innerHTML = `<div class="pill">No leagues</div>`
     return
   }
+
+  const search = String(state.leagueSearch ?? "").trim().toLowerCase()
 
   function splitName(full) {
     const s = String(full ?? "").trim()
@@ -18,6 +20,26 @@ export function renderSidebar(ui, state, render) {
       return { country, league }
     }
     return { country: s || "Other", league: s || "League" }
+  }
+
+  function leagueMatchesSearch(league) {
+    if (!search) return true
+    const rawName = String(league?.name ?? "")
+    const name = rawName.toLowerCase()
+    if (name.includes(search)) return true
+
+    const parts = splitName(rawName)
+    const countryLc = String(parts.country ?? "").toLowerCase()
+    const leagueLc = String(parts.league ?? "").toLowerCase()
+    if (countryLc.includes(search) || leagueLc.includes(search)) return true
+
+    const games = Array.isArray(league?.games) ? league.games : []
+    for (const g of games) {
+      const h = String(g.homeTeam ?? "").toLowerCase()
+      const a = String(g.awayTeam ?? "").toLowerCase()
+      if (h.includes(search) || a.includes(search)) return true
+    }
+    return false
   }
 
   function flagFor(country) {
@@ -33,6 +55,13 @@ export function renderSidebar(ui, state, render) {
     if (c.includes("maroc") || c.includes("morocco")) return "🇲🇦"
     if (c.includes("alg") || c.includes("alger")) return "🇩🇿"
     return "🏳️"
+  }
+
+  const leagues = search ? allLeagues.filter(leagueMatchesSearch) : allLeagues
+
+  if (!leagues.length) {
+    ui.leagueList.innerHTML = `<div class="pill">No competitions or games match "${search}"</div>`
+    return
   }
 
   const groups = []

@@ -3,6 +3,7 @@ export const $ = (id) => document.getElementById(id)
 export function getUi() {
   return {
     leagueList: $("leagueList"),
+    leagueSearch: $("leagueSearch"),
     leagueName: $("leagueName"),
     leagueDate: $("leagueDate"),
     dayLabel: $("dayLabel"),

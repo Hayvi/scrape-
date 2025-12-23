@@ -3,6 +3,7 @@ export function createState() {
     mode: "prematch",
     data: null,
     selectedLeagueId: null,
+    leagueSearch: "",
     debugOpen: false,
     onlyWithOdds: false,
     hideEmptyCompetitions: false,
