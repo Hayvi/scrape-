@@ -13,6 +13,20 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
   const betRangeFilter = "0"
   const lockOwner = `worker:${Math.random().toString(16).slice(2)}`
 
+  const staleLockCutoffIso = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+  try {
+    const unstickRunning = await db
+      .from("scrape_queue")
+      .update({ status: "pending", not_before_at: null, locked_at: null, lock_owner: null })
+      .eq("source", SOURCE)
+      .eq("task", "prematch_catalog_page")
+      .eq("status", "running")
+      .not("locked_at", "is", null)
+      .lt("locked_at", staleLockCutoffIso)
+    if (unstickRunning.error) throw new Error(`prematch_catalog_page stale running unstick failed: ${JSON.stringify(unstickRunning.error)}`)
+  } catch {
+  }
+
   const futureCutoffIso = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
   try {
     const unstick = await db
@@ -97,6 +111,7 @@ export async function runPrematchDiscovery(env: WorkerEnv, opts?: { batch?: numb
     const h = String(html || "")
     if (!h) return true
     if (/Actuellement,\s+il\s+n\x27y\s+a\s+pas\s+de\s+correspondances\s+actives\./i.test(h)) return false
+    if (/\b403\b|\bforbidden\b|access\s+denied|error\s*1020|you\s+have\s+been\s+blocked|blocked\s+by\s+cloudflare/i.test(h)) return true
     if (/cloudflare|checking your browser|attention required|cf-ray|cdn-cgi/i.test(h)) return true
     if (/document\.cookie\s*=\s*"[^";=]+=[^;]+\s*;\s*path=\//i.test(h)) return true
     return false
